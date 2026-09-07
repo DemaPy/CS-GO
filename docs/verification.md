@@ -191,3 +191,76 @@ before drei renders the `<Scroll html>` overlay, so an effect-time
 
 Zero errors on desktop and mobile, production build. Still exactly one warning:
 the upstream `THREE.Clock` deprecation from inside `@react-three/fiber`.
+
+---
+
+## Step 7 — validation, capture, checkout
+
+### 7.1/7.2 schema, verified in isolation (15 cases + 1 negative property)
+
+| Input | Message |
+|---|---|
+| `notanemail` | that address is missing an @ |
+| `""` / `"   "` | type an address first |
+| `a@@b.co` | that address has more than one @ |
+| `@example.com` | add the part before the @ |
+| `ops@` | add the domain after the @ |
+| `ops@example` | the domain needs a dot, like example.com |
+| `ops@example.` / `ops@.com` | that domain has a stray dot |
+| 250-char local part | that address is too long |
+| `a@b.co`, `ops@example.com`, `OPS@Example.COM`, `  ops@example.com  `, `first.last+tag@sub.example.co.uk` | valid |
+
+Also asserted as a property: **no message contains** "oops", "sorry",
+"something went wrong", "invalid input" or "error". Error copy states what to
+fix, per Step 7.2.
+
+Normalisation confirmed: `"  OPS@Example.COM "` parses to `ops@example.com`.
+
+### 7.3 route handler
+
+| Request | Response |
+|---|---|
+| valid email | `200 {"ok":true,"stored":false}` |
+| `notanemail` | `400 {"ok":false,"errors":{"email":["that address is missing an @"]}}` |
+| `{}` | `400` — expected string, received undefined |
+| malformed JSON | `400 {"errors":{"email":["send a JSON body"]}}` |
+
+Server log confirms normalisation reached the provider layer:
+`[capture] no audience configured; captured ops@example.com`.
+
+### 7.5 the three cases, in a real browser against a production build
+
+| Case | Result |
+|---|---|
+| `notanemail` | inline `that address is missing an @`, `aria-invalid=true`, **no** POST to `/api/capture`, no navigation, no Paddle frame |
+| valid address | POST body `{"email":"ops@example.com"}` (trimmed + lowercased by the shared schema), no error, Paddle overlay opened |
+| capture forced to **500** | POST fired, and the **overlay still opened** against `sandbox-buy.paddle.com` — a broken list provider does not block a sale |
+
+Overlay confirmed visually: Test Mode, US$10.00, product "C4",
+`ops3@example.com` pre-filled, "Sold by Paddle".
+
+### Credential separation, verified in the built bundle
+
+The plan's Stripe redirect became a Paddle overlay, which means a client SDK and
+a public token. Checked what actually ships:
+
+| Value | In `.next/static` | Correct? |
+|---|---|---|
+| `NEXT_PUBLIC_PADDLE_PRICE_ID` | present | yes — public by design |
+| `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN` (`test_…`) | present | yes — public by design |
+| `PADDLE_API_KEY` (`pdl_sdbx_apikey_…`) | **absent** | yes — server-only |
+| `CAPTURE_RESEND_API_KEY` | **absent** | yes — server-only |
+
+This matters because the operator initially supplied the Paddle **API key** for
+the client-token slot. Two independent reasons not to: `NEXT_PUBLIC_` values are
+compiled into the downloadable bundle (demonstrated above), and
+`initializePaddle()` validates the token and rejects an API key, so checkout
+would not have loaded at all.
+
+### Test-harness trap worth recording
+
+Dispatching an `input` event and calling `button.click()` synchronously reads
+the **previous** React state, because the re-render has not committed. The first
+run reported "type an address first" for input `notanemail`, and case 2 showed
+case 1's error — both harness artifacts, not app bugs. Wait two animation frames
+between typing and submitting.

@@ -6,10 +6,14 @@ import { useEffect, useRef, useState, type RefObject } from 'react'
 import type { Object3D } from 'three'
 
 import { DISPLAY_LIVE_AT } from '@/content/sections'
+import { checkoutConfigured, loadPaddle, openCheckout } from '@/lib/paddle'
+import { CaptureInput, firstEmailError } from '@/lib/schema'
 
 /** Opacity ramp for the panel lighting up, per plan Step 6.2. */
 const FADE_FROM = 0.8
 const FADE_TO = 0.9
+
+type Status = 'idle' | 'sending' | 'opening' | 'error' | 'captured'
 
 /**
  * The device's display, as a real DOM input positioned in 3D space.
@@ -32,6 +36,8 @@ export function DisplayPanel({
   const inputRef = useRef<HTMLInputElement>(null)
   const [live, setLive] = useState(false)
   const [value, setValue] = useState('')
+  const [status, setStatus] = useState<Status>('idle')
+  const [error, setError] = useState<string | null>(null)
 
   // Opacity is written straight to the DOM each frame; only the `live`
   // transition crosses back into React, and that happens twice per scroll pass.
@@ -58,6 +64,67 @@ export function DisplayPanel({
       inputRef.current?.blur()
     }
   }, [live])
+
+  // Warm Paddle.js when the panel lights, not at mount — see lib/paddle.ts.
+  useEffect(() => {
+    if (live) void loadPaddle().catch(() => {})
+  }, [live])
+
+  async function onSubmit(event: React.FormEvent) {
+    event.preventDefault()
+    if (status === 'sending' || status === 'opening') return
+
+    // Validate before any network call (Step 7.2). An invalid address shows an
+    // inline message and does not navigate.
+    const message = firstEmailError(value)
+    if (message) {
+      setError(message)
+      setStatus('error')
+      inputRef.current?.focus()
+      return
+    }
+
+    const email = CaptureInput.parse({ email: value }).email
+    setError(null)
+    setStatus('sending')
+
+    // Capture first, then checkout (Step 7.4): a visitor who abandons checkout
+    // is still on the list. A capture failure must not cost the sale, so the
+    // result is logged and ignored rather than blocking.
+    try {
+      const response = await fetch('/api/capture', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      if (!response.ok) {
+        console.error('[capture] returned', response.status)
+      }
+    } catch (cause) {
+      console.error('[capture] request failed:', cause)
+    }
+
+    setStatus('opening')
+    const opened = await openCheckout(email).catch((cause) => {
+      console.error('[checkout] failed to open:', cause)
+      return false
+    })
+
+    if (!opened) {
+      // True, and specific about whose problem it is.
+      setStatus('captured')
+      setError(
+        checkoutConfigured
+          ? 'checkout did not open — try again'
+          : 'address saved — checkout opens once billing is live',
+      )
+      return
+    }
+
+    setStatus('idle')
+  }
+
+  const busy = status === 'sending' || status === 'opening'
 
   return (
     <Html
@@ -87,30 +154,67 @@ export function DisplayPanel({
         style={{ opacity: 0, pointerEvents: 'none' }}
         className="w-[240px] rounded-[4px] border border-black/60 bg-[#0b0f08] px-[16px] py-[14px] shadow-[inset_0_2px_9px_rgba(0,0,0,0.9)]"
       >
-        <label
-          htmlFor="arm-email"
-          className="readout mb-[8px] block text-[10px] opacity-55"
-        >
-          address
-        </label>
-        <input
-          ref={inputRef}
-          id="arm-email"
-          type="email"
-          name="email"
-          inputMode="email"
-          autoComplete="email"
-          spellCheck={false}
-          placeholder="&mdash;&mdash;&mdash;"
-          disabled={!live}
-          tabIndex={live ? 0 : -1}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          // 14-segment glyphs are wider than 7-segment, so this runs smaller
-          // than the label ratio would suggest. Long addresses scroll the
-          // input natively rather than overflowing the panel.
-          className="readout w-full border-0 bg-transparent p-0 text-[14px] outline-none placeholder:text-[#4ee27b]/25 disabled:cursor-default"
-        />
+        <form onSubmit={onSubmit} noValidate>
+          <label
+            htmlFor="arm-email"
+            className="readout mb-[8px] block text-[10px] opacity-55"
+          >
+            address
+          </label>
+
+          <div className="flex items-end gap-[10px]">
+            <input
+              ref={inputRef}
+              id="arm-email"
+              type="email"
+              name="email"
+              inputMode="email"
+              autoComplete="email"
+              spellCheck={false}
+              placeholder="&mdash;&mdash;&mdash;"
+              disabled={!live || busy}
+              tabIndex={live ? 0 : -1}
+              value={value}
+              aria-invalid={status === 'error'}
+              aria-describedby={error ? 'arm-email-message' : undefined}
+              onChange={(e) => {
+                setValue(e.target.value)
+                if (status === 'error') {
+                  setStatus('idle')
+                  setError(null)
+                }
+              }}
+              // 14-segment glyphs are wider than 7-segment, so this runs
+              // smaller than the label ratio would suggest. Long addresses
+              // scroll the input natively rather than overflowing the panel.
+              className="readout min-w-0 flex-1 border-0 bg-transparent p-0 text-[14px] outline-none placeholder:text-[#4ee27b]/25 disabled:cursor-default"
+            />
+
+            <button
+              type="submit"
+              disabled={!live || busy}
+              tabIndex={live ? 0 : -1}
+              // Says what happens when used, and keeps the same word as the
+              // section heading. Also the mobile tap target — Enter works, but
+              // not every keyboard shows a submit key.
+              className="readout shrink-0 rounded-[3px] border border-[#4ee27b]/45 px-[9px] py-[3px] text-[10px] disabled:opacity-40"
+            >
+              {busy ? 'wait' : 'arm'}
+            </button>
+          </div>
+
+          {error && (
+            <p
+              id="arm-email-message"
+              // Amber, not red: red appears nowhere in this palette, and the
+              // message is a correction, not an alarm.
+              className="readout mt-[9px] text-[9px] leading-[1.4] text-amber"
+              role="status"
+            >
+              {error}
+            </p>
+          )}
+        </form>
       </div>
     </Html>
   )
