@@ -106,3 +106,88 @@ running both.
   query.
 - **8.4** Lighthouse mobile ≥ 70.
 - **7.5** the three email cases, which need Step 7 built first.
+
+---
+
+## Step 6 — the display in 3D space
+
+Verified against a production build at 1280x800, 1440x900, 1680x720 and
+390x844, reloading after each resize (see the caveat below).
+
+| Check | Result |
+|---|---|
+| 6.1 real `<input type="email">` | `type=email`, `inputMode=email`, `autoComplete=email` |
+| 6.2 inert before 0.85 | at p=0.84: `disabled`, `tabIndex=-1`, `aria-hidden=true`, `pointer-events: none` |
+| 6.2 live after 0.85 | at p=0.90: enabled, `tabIndex=0`, `aria-hidden=false`, `pointer-events: auto` |
+| 6.2 opacity ramp 0.80-0.90 | 0 at 0.80, 0.40 at 0.84, ~1.00 at 0.90 |
+| 6.3 readout font | `DSEG14 Classic` confirmed loaded via `document.fonts.check` |
+| 6.3 display green only here | `rgb(78, 226, 123)` = `--armed`; absent everywhere else |
+| typing | value round-trips through React: `ops@example.com` |
+| 8.2 focus ring | amber ring, unmistakable against the dark panel (screenshot) |
+| blur on scroll-up | input loses focus when progress drops below 0.85 |
+
+### DSEG7 -> DSEG14, a deliberate deviation from the plan
+
+The plan specifies DSEG7 Classic. Shipped DSEG**14** Classic instead.
+
+A seven-segment display physically cannot form most letters. `ops@example.com`
+rendered as **`oPb@EHANPLE.coN`** — `s`->`b`, `x`->`H`, `m`->`N`. The visitor
+could not read back the address they had just typed, on the one field that
+decides whether they receive the product. Fourteen-segment displays exist for
+exactly this reason. Same family, same licence, same segmented-LCD look, legible
+letters. One font ships, not two (6KB).
+
+### Panel framing — three attempts, recorded because the first two looked fine
+
+1. **Fixed world offset** to push the panel clear of the copy column. Measured
+   clean at 1440x900, clipped the headline everywhere else: a hardcoded offset
+   cannot know the aspect ratio.
+2. **Measured offset**, reading the copy column's real width from the DOM.
+   Worse. Aiming the camera off-axis views the panel at an angle, and
+   perspective then stretches its projected width ~40%, so the fit arithmetic
+   was solving for the wrong number.
+3. **Copy above the panel** (the operator's suggestion), camera dead centre,
+   distance constrained on **both** axes. Width alone left only 16px between
+   panel and headline at 1680x720, because a width-fitted panel grows
+   vertically on short viewports.
+
+### The Section 5 copy had to be pinned
+
+drei scrolls the five 100vh blocks across a travel of (n-1) viewports, so the
+last block is still sliding up through the middle of the frame exactly when the
+display goes live. Moving the copy above the panel fixed the endpoint but not
+the journey — at p=0.90 the heading sat 300px inside the lit panel.
+
+`pinStageFive` counter-translates that block to its final position over
+0.80-0.85 and holds it. Both terms are zero at 0.80, so it joins the natural
+motion continuously rather than snapping. Verified at 1440x900:
+
+| progress | pin | heading top | clearance | panel opacity |
+|---|---|---|---|---|
+| 0.75 | none | 999 (off-screen) | — | 0 |
+| 0.80 | `ty 0` | 819 | — | 0 |
+| 0.85 | `ty -540` | 99 | +50 | 0.5 |
+| 0.90 | `ty -360` | 99 | +60 | 1 |
+| 0.95 | `ty -180` | 99 | +87 | 1 |
+| 1.00 | `ty 0` | 99 | +121 | 1 |
+
+The node is resolved lazily, not in an effect: `Device` mounts inside the Canvas
+before drei renders the `<Scroll html>` overlay, so an effect-time
+`querySelector` returned null and the pin silently never applied. The first
+"fixed" build measured identically to the broken one for that reason.
+
+### Measurement caveats worth keeping
+
+- **Reload after resizing.** `ScrollControls` computes page geometry on mount.
+  Resizing without reloading reported the last section 320px above the viewport
+  at 1680x720 — a stale-layout artifact, not a bug. Reloaded: `top: 0`.
+- **`querySelector('h2')` grabs Section 1's heading**, which is scrolled far
+  off-screen and yields a nonsense clearance that looks like a pass. Scope to
+  `section:last-of-type`.
+- **`resize_page` clamps at 500px.** Use CDP device-metrics emulation for
+  anything narrower or a mobile test silently runs at the wrong width.
+
+## Console state after Step 6
+
+Zero errors on desktop and mobile, production build. Still exactly one warning:
+the upstream `THREE.Clock` deprecation from inside `@react-three/fiber`.

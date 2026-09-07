@@ -48,6 +48,32 @@ body {
   text-wrap: balance;
 }
 
+/* DSEG14 Classic — keshikan, SIL OFL 1.1, Reserved Font Name "DSEG".
+   License ships beside the font at public/fonts/DSEG-LICENSE.txt, which the
+   OFL requires when distributing the font software. Used unmodified.
+   `swap` so a 6KB font never blocks the readout from being usable.
+
+   DSEG*14*, not the DSEG7 the plan named. A seven-segment display physically
+   cannot form most letters: `ops@example.com` rendered as `oPb@EHANPLE.coN`,
+   so the visitor could not verify the address they had just typed — on the one
+   field that decides whether they receive the product. Fourteen-segment
+   displays exist for exactly this reason. Same family, same segmented-LCD
+   look, legible letters. */
+@font-face {
+  font-family: 'DSEG14 Classic';
+  src: url('/fonts/DSEG14Classic-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+
+/* The only place --armed appears. If this green shows up in a heading, a hover
+   state or a scroll cue, section 5 stops being a payoff. */
+.readout {
+  font-family: 'DSEG14 Classic', ui-monospace, monospace;
+  color: var(--armed);
+  letter-spacing: 0.06em;
+}
+
 /* Mobile: dim the device, never the copy. Scoped to the canvas element
    because drei's `<Scroll html>` overlay shares the Canvas container div —
    dimming the container fades the headline too. */
