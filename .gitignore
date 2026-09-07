@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local-only assets — never commit (plan Step 3.1)
+.local/
+
+# Rejected dev-placeholder asset — decompiled Valve, must not enter git history
+c4-explosive/
+
+.DS_Store
