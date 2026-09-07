@@ -1,26 +1,77 @@
 @import "tailwindcss";
 
+/* Palette per plan Visual Direction. Defined once, here, and nowhere else.
+   A machined field device: olive canvas, oxidised brass, warning-tape amber. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --surface: #1a1c17; /* page ground — desaturated olive-black, warmer than neutral dark */
+  --canvas: #3f4536; /* olive drab, mid-tone blocks and dividers */
+  --brass: #8a6e3b; /* oxidised metal, rules and borders */
+  --amber: #c8862a; /* warning accent — stage markers */
+  --paper: #d8d4c6; /* body text, slightly warm off-white */
+  --armed: #4ee27b; /* display green — SECTION 5 ONLY, nowhere else */
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-surface: var(--surface);
+  --color-canvas: var(--canvas);
+  --color-brass: var(--brass);
+  --color-amber: var(--amber);
+  --color-paper: var(--paper);
+  --color-armed: var(--armed);
+  --font-sans: var(--font-archivo);
+  --font-seven: var(--font-seven);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* The device is dark in every context. No light-mode inversion — a field
+   device does not have a light mode, and the display green only reads on dark. */
+html,
+body {
+  height: 100%;
+  background: var(--surface);
+  color: var(--paper);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-archivo), system-ui, sans-serif;
+  /* Step 5.6: the page must never scroll horizontally at any width. */
+  overflow-x: hidden;
+}
+
+/* Headings use the same family at expanded width — one family, two widths,
+   so the pairing is a decision rather than a default serif-plus-sans. */
+.h-display {
+  font-family: var(--font-archivo), system-ui, sans-serif;
+  font-weight: 700;
+  font-stretch: 125%;
+  letter-spacing: -0.02em;
+  line-height: 1.04;
+  text-wrap: balance;
+}
+
+/* Mobile: dim the device, never the copy. Scoped to the canvas element
+   because drei's `<Scroll html>` overlay shares the Canvas container div —
+   dimming the container fades the headline too. */
+.dim-device canvas {
+  opacity: 0.35;
+}
+
+/* Step 8.2: focus must be unmistakable against the dark panel. Applied
+   globally so no interactive element can quietly lose its ring. */
+:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 3px;
+}
+
+/* Step 8.1: reduced motion kills the scrub, not the content. The rig mounts
+   fully assembled and the sections become an ordinary scrolling document.
+   Verify by toggling the OS setting, not by editing this query. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -32,6 +32,15 @@ interface PartSpec {
  *
  * Reads as: a back shell, four charges seated 2x2 on its face, a harness bar
  * crossing them, a display panel in the upper front, and an arming switch below.
+ *
+ * ## Scatter constraint
+ *
+ * Start transforms must sit **outside the frame** but never **between the
+ * device and the lens**. With the camera at z=0.55 and fov 35, the visible
+ * half-extents at z=0 are ~0.174 (y) and ~0.278 (x on a 16:10 viewport), so a
+ * part is off-frame past those. Pushing a part toward +z instead puts it
+ * through the near plane, where it fills the viewport as an unreadable black
+ * mass — parts scatter sideways, up, down, and *behind*, never forward.
  */
 const PARTS: PartSpec[] = [
   {
@@ -39,7 +48,8 @@ const PARTS: PartSpec[] = [
     section: 'casing',
     size: [B.x, B.y, B.z * 0.45],
     end: { pos: [0, 0, -B.z * 0.275] },
-    start: { pos: [0, -B.y * 2.2, -B.z * 0.275], rot: [0, 0, 0.5] },
+    // rises from below the frame
+    start: { pos: [0, -0.42, -B.z * 0.9], rot: [0, 0, 0.5] },
   },
 
   // Four charges, 2x2 on the casing face. Each flies in from its own corner so
@@ -54,8 +64,9 @@ const PARTS: PartSpec[] = [
     section: 'charges',
     size: [B.x * 0.46, B.y * 0.46, B.z * 0.5],
     end: { pos: [sx * B.x * 0.245, sy * B.y * 0.245, B.z * 0.1] },
+    // in from its own off-frame corner, and from behind
     start: {
-      pos: [sx * B.x * 2.4, sy * B.y * 1.9, B.z * 3.5],
+      pos: [sx * 0.46, sy * 0.34, -0.11],
       rot: [sy * 0.7, sx * 0.7, sx * sy * 0.4],
     },
   })),
@@ -65,23 +76,41 @@ const PARTS: PartSpec[] = [
     section: 'harness',
     size: [B.x * 1.02, B.y * 0.055, B.z * 0.055],
     end: { pos: [0, 0, B.z * 0.36] },
-    start: { pos: [-B.x * 3.2, 0, B.z * 0.36], rot: [0, 0, 1.2] },
+    // Slides in from off-frame RIGHT. Coming from the left would drag it
+    // straight across the copy column, which sits in the left third on
+    // desktop — a part crossing the headline reads as a bug, not assembly.
+    start: { pos: [0.62, 0, B.z * 0.36], rot: [0, 0, 1.2] },
   },
   {
     name: 'panel',
     section: 'panel',
     size: [B.x * 0.62, B.y * 0.3, B.z * 0.1],
     end: { pos: [0, B.y * 0.28, B.z * 0.42] },
-    start: { pos: [0, B.y * 0.28, B.z * 4.0], rot: [0.9, 0, 0] },
+    // drops in from above the frame, tilted
+    start: { pos: [0, 0.42, B.z * 0.42], rot: [0.9, 0, 0] },
   },
   {
     name: 'arm_switch',
     section: 'arm',
     size: [B.x * 0.16, B.y * 0.075, B.z * 0.1],
     end: { pos: [0, -B.y * 0.34, B.z * 0.42] },
-    start: { pos: [0, -B.y * 0.34, B.z * 2.2], rot: [0, 0, 1.5] },
+    // up from below the frame
+    start: { pos: [0, -0.4, B.z * 0.42], rot: [0, 0, 1.5] },
   },
 ]
+
+/**
+ * Straight from the Visual Direction palette. The panel is darkest so the
+ * display green has somewhere to land in Step 6 — the green itself appears
+ * nowhere in this file, because scarcity is the whole point of it.
+ */
+const PART_COLOR: Record<SectionId, number> = {
+  casing: 0x2f3428, // olive drab, shaded down — it sits behind everything
+  charges: 0x3f4536, // --canvas
+  harness: 0x8a6e3b, // --brass
+  panel: 0x14180f, // near-black, waiting for the readout
+  arm: 0x8a6e3b, // --brass, same metal as the harness
+}
 
 interface Part {
   object: Mesh
@@ -109,9 +138,11 @@ export function createPlaceholderRig(): AssemblyRig {
   for (const spec of PARTS) {
     const geometry = new BoxGeometry(...spec.size)
     const material = new MeshStandardMaterial({
-      color: spec.section === 'panel' ? 0x1b2b22 : 0x4a4a44,
-      roughness: 0.7,
-      metalness: 0.2,
+      color: PART_COLOR[spec.section],
+      // The harness is the one metal part — oxidised brass, so it reads as a
+      // different material from the olive-drab body rather than a darker box.
+      roughness: spec.section === 'harness' ? 0.35 : 0.72,
+      metalness: spec.section === 'harness' ? 0.8 : 0.15,
     })
     geometries.push(geometry)
     materials.push(material)
