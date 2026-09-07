@@ -264,3 +264,104 @@ the **previous** React state, because the re-render has not committed. The first
 run reported "type an address first" for input `notanemail`, and case 2 showed
 case 1's error — both harness artifacts, not app bugs. Wait two animation frames
 between typing and submitting.
+
+---
+
+## Step 7b — double opt-in for newsletter consent (Revision 4)
+
+Operator changed the flow: capture an address, confirm it by email, and keep
+the address off the list until confirmed. Chosen shape, after discussion:
+**payment never waits.** The Paddle overlay opens immediately; the confirmation
+email runs alongside it to earn marketing consent. Paddle already verifies the
+buyer at checkout, so gating payment behind an inbox round-trip would cost
+sales without buying fraud protection.
+
+```
+display: type address
+   ↓  POST /api/capture          nothing stored yet
+   ├─ Paddle overlay opens NOW   (email pre-filled)
+   └─ Resend: confirmation email (React Email template)
+           ↓  clicked whenever
+      /api/confirm  → verify HMAC + expiry
+           ↓
+      Resend audience  ← the ONLY place a contact is created
+           ↓  303
+      /subscribed?state=confirmed
+```
+
+The load-bearing property: **an unconfirmed address never reaches the list.**
+That is what makes the consent record defensible rather than asserted.
+
+### Signed tokens, verified
+
+Stateless HMAC-SHA256 over `{email, expiry}`, base64url, compared with
+`timingSafeEqual`. No database.
+
+| Check | Result |
+|---|---|
+| valid token round-trips to the address | PASS |
+| payload swapped to `attacker@evil.test`, signature kept | rejected `bad-signature` |
+| one signature character flipped | rejected `bad-signature` |
+| minted 8 days ago | rejected `expired` |
+| minted 6 days ago | still valid |
+| `""`, `"."`, `nodot`, `a.`, `.b`, `a.b`, `!!!.???` | all rejected |
+
+The forgery case is the one that matters: without it, anyone could edit a link
+to subscribe an address they do not control.
+
+### End-to-end over real HTTP
+
+| Request | Result |
+|---|---|
+| valid confirm link | `303 → /subscribed?state=confirmed`, log `verified ops@example.com` |
+| payload swapped, signature kept | `303 → state=invalid`, log `bad-signature` |
+| `?t=nonsense` | `303 → state=invalid`, log `malformed` |
+| `POST /api/capture` with `delivered@resend.dev` | `{"ok":true,"invited":true}` — real send accepted by Resend |
+| `POST /api/capture` with `ops@example.com` | `invited:false`; Resend 422: `example.com` is a reserved test domain |
+
+`/subscribed` renders distinct copy for `confirmed` / `expired` / `invalid`, is
+`noindex, nofollow`, and whitelists the state param (an injected value falls
+back rather than rendering). Note: the fallback is `confirmed`, so a direct
+visit to `/subscribed` shows the success copy — cosmetic only, since audience
+membership is the actual record and nothing is stored by that page.
+
+### The email
+
+`src/emails/confirm-address.tsx`, built with React Email. Warning-tape header,
+brass-bordered housing, a green LED "NOT ARMED" status panel, an "Arm
+subscription" button. A stylistic homage carrying no third-party game
+trademarks, logos, or in-game lines — this is commercial mail for our own
+product.
+
+Rendered output checked against how email clients actually behave:
+
+| Property | Value |
+|---|---|
+| HTML size | 6.2 KB |
+| webfonts / `@font-face` | none — DSEG14 would silently fall back, so the readout uses a monospace stack |
+| `<img>` tags | 0 — an image-blocked client still shows every word, including the button |
+| `<style>` blocks | 0 |
+| `class=` attributes | 0 — Gmail strips them |
+| `display:flex` / `grid` | none |
+| confirm URL occurrences | 2 (button + paste-in fallback) |
+| preview text | present |
+
+The plain-text part is rendered from the same component
+(`render(el, { plainText: true })`), so it cannot drift from the HTML — which is
+how hand-maintained text parts rot.
+
+### Notes and caveats
+
+- **Confirm-link logging is guarded by `NODE_ENV !== 'production'`.** The link
+  grants the consent it represents, so it must not sit in production logs. This
+  is why the end-to-end test ran against a dev server: `next start` sets
+  production and correctly suppressed it.
+- **`@react-email/components@1.0.12` installs with a deprecation warning**
+  ("Package no longer supported") despite being the `latest` tag. It builds and
+  typechecks; worth revisiting before relying on it further.
+- **`CAPTURE_RESEND_AUDIENCE_ID` is still unset**, so `/api/confirm` verifies
+  consent and logs it but stores nothing. Everything else in the chain is
+  proven; this is one env var away from live.
+- **Domain verification is still required** to mail arbitrary addresses.
+  `onboarding@resend.dev` reaches only the account owner and Resend's own test
+  addresses.
