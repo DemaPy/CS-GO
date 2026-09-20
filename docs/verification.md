@@ -455,6 +455,45 @@ short before the cause was found. It is not a stale portal left by HMR — there
 was exactly one `input[type=email]` in the document at the time. Lighthouse,
 mobile and reduced-motion (Step 8) were not run.
 
+### Two bugs found while testing the model locally
+
+**Stage four and stage five copy collide — pre-existing, not model-related.**
+`pinStageFive` brings section five's copy to the top of the viewport over
+0.80-0.85, but section five 100vh boxes travel only `(n-1)` viewports, so
+section four's box does not clear the top until progress **1.0**. The two
+therefore share the viewport, and their copy blocks intersect from
+**p = 0.8321** to about 0.89, peaking around 120px — at 0.84 section five's
+heading lands wholly inside section four's block.
+
+`pinStageFive` and `Overlay.tsx` are untouched by the glTF work, so this is
+Step 5 behaviour. It went unnoticed because the Step 5 checks were made at
+p = 1.0, where section four is a full viewport above the fold and there is
+nothing to see.
+
+Fixed by fading section four's copy over `FADE_STAGE_FOUR = [0.80, 0.83]`,
+which keeps the pin's purpose — section five still never slides through the lit
+panel. **The first attempt at this fix was wrong**: a gentler `[0.80, 0.88]`
+fade left section four 65% opaque when the overlap opened, which is the same
+collision in lighter ink. Verified by sweeping progress in steps of 1e-4 and
+asserting opacity is 0 at every value where the blocks intersect; `[0.80, 0.88]`
+fails 432 of those samples, `[0.80, 0.83]` fails none.
+
+**The readout blinks while scrolling — specific to the glTF rig.**
+`DisplayPanel` occludes by raycasting from the camera to the anchor against
+`displayAnchor.parent`. For the placeholder that parent is one flat box with the
+anchor squarely in front, so no ray can clip it. For the glTF rig it is the
+`panel` group of 13 meshes — a plate and a 4x3 grid of keypad tiles — and the
+exported anchor cleared them by 0.5 mm. Over tiles ~10 mm wide that is about 3
+degrees of angular margin, so as the camera swings off-axis during the scroll
+the ray grazes a neighbouring tile and drei hides the element for a frame.
+
+Fixed by standing the anchor 4 mm off the panel face in `createGltfRig`
+(~22 degrees of margin, covering the whole Section 5 camera path).
+**Not visually confirmed** — the automated browser tab could not initialise a
+WebGL context, so `<Canvas>` rendered with no children and neither rig ever
+mounted there. The reasoning and the arithmetic are sound; the flicker itself
+needs a human to eyeball.
+
 `ReactDOMClient.createRoot()` errors ("called on a container that has already
 been passed to createRoot") fire on every load. **They predate this work** —
 they appear identically with `USE_DEV_MODEL = false` on the placeholder rig.

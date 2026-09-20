@@ -29,6 +29,19 @@ const DEV_MODEL_URL = '/models/dev-device.glb'
 const CAMERA_PUSH: [number, number] = [0.8, 1.0]
 
 /**
+ * Scroll range over which section four's copy fades out.
+ *
+ * Starts where the camera push does, so the two read as one move, and must be
+ * *finished* by 0.8321 — the computed progress at which section four's copy
+ * block and the pinned section-five block first intersect. A longer, gentler
+ * fade does not work: ending at 0.88 leaves section four still 65% opaque when
+ * the overlap opens, which is the same collision just fainter. Verified by
+ * sweeping progress in steps of 1e-4 and asserting opacity is 0 wherever the
+ * two blocks intersect.
+ */
+const FADE_STAGE_FOUR: [number, number] = [0.8, 0.83]
+
+/**
  * Framing distance. Device longest dimension is 0.25 m at 35° fov, which needs
  * 0.40 m to fit exactly — 0.55 leaves margin so the assembled device is not
  * flush against the frame edge.
@@ -131,12 +144,39 @@ function DeviceScene({
   // drei has rendered the <Scroll html> overlay, so an effect-time lookup here
   // returns null and the pin silently never applies.
   const stage5 = useRef<HTMLElement | null>(null)
+  const stage4 = useRef<HTMLElement | null>(null)
   useEffect(() => {
-    const node = stage5.current
+    const five = stage5.current
+    const four = stage4.current
     return () => {
-      if (node) node.style.transform = ''
+      if (five) five.style.transform = ''
+      if (four) four.style.opacity = ''
     }
   }, [scrub, desktop])
+
+  /**
+   * Fades section four's copy out as the section-five pin engages.
+   *
+   * The two collide without this. `pinStageFive` brings section five's copy to
+   * the top of the viewport over 0.80-0.85, but section four's box is 100vh in
+   * a container that only travels (n-1) viewports, so it does not clear the top
+   * until progress 1.0 — the two occupy the same band from about 0.83 to 0.89,
+   * and at 0.84 section five's heading lands inside section four's copy block.
+   *
+   * Fading the outgoing stage is the resolution that keeps the pin's purpose:
+   * section five still never slides up through the lit panel. See
+   * `FADE_STAGE_FOUR` for why the window is as tight as it is.
+   */
+  function fadeStageFour(progress: number) {
+    if (!stage4.current) {
+      stage4.current = document.querySelector<HTMLElement>('[data-stage4-copy]')
+    }
+    const node = stage4.current
+    if (!node) return
+
+    const t = smoothstep(subProgress(progress, FADE_STAGE_FOUR))
+    node.style.opacity = String(1 - t)
+  }
 
   /**
    * Holds the Section 5 copy at the top of the viewport once the panel lights.
@@ -211,6 +251,7 @@ function DeviceScene({
     camera.lookAt(target.current)
 
     pinStageFive(progress)
+    fadeStageFour(progress)
   }
 
   // Reduced motion: assemble once, at the end state, and stop.

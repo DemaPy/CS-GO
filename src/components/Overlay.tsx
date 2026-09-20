@@ -14,6 +14,10 @@ export function Overlay() {
     <div className="w-screen">
       {SECTIONS.map((section, i) => {
         const isLast = i === SECTIONS.length - 1
+        // Section 4's box does not clear the viewport until progress 1.0, so
+        // it is still on screen when section 5's copy pins to the top. See
+        // the fade in Experience for why that needs a handle.
+        const isPenultimate = i === SECTIONS.length - 2
         return (
           <section
             key={section.id}
@@ -32,6 +36,7 @@ export function Overlay() {
                 0.80-1.00 and only clears the display at exactly 1.0. */}
             <div
               {...(isLast ? { 'data-stage5-copy': '' } : {})}
+              {...(isPenultimate ? { 'data-stage4-copy': '' } : {})}
               className="max-w-[34ch] will-change-transform"
             >
               {/* Sentence case, not tracked-out caps. The stage number encodes a

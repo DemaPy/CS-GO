@@ -127,6 +127,26 @@ export function createGltfRig(source: Object3D): AssemblyRig {
   displayAnchor.updateWorldMatrix(true, false)
   const anchorScale = new Vector3()
   displayAnchor.getWorldScale(anchorScale)
+
+  /**
+   * Stand the anchor off the panel face before normalising its scale.
+   *
+   * `DisplayPanel` occludes by raycasting from the camera to this anchor
+   * against `displayAnchor.parent`. For the placeholder that parent is a single
+   * flat box and the anchor sits squarely in front of it, so no ray can ever
+   * clip it. Here the parent is a group of 13 meshes — a plate and a 4x3 grid
+   * of keypad tiles — and the exported anchor cleared them by only 0.5 mm.
+   * Across tiles roughly 10 mm wide that is about 3 degrees of angular margin,
+   * so once the camera swings off-axis during the scroll the ray grazes a
+   * neighbouring tile, drei hides the readout, and the next frame shows it
+   * again. That flicker is the symptom; this clearance is the cause.
+   *
+   * 4 mm buys ~22 degrees, which covers the whole Section 5 camera path, and
+   * is still flush enough to read as sitting on the device.
+   */
+  const CLEARANCE_M = 0.004
+  displayAnchor.position.z += CLEARANCE_M / (anchorScale.z || 1)
+
   displayAnchor.scale.set(
     displayAnchor.scale.x / (anchorScale.x || 1),
     displayAnchor.scale.y / (anchorScale.y || 1),
