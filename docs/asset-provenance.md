@@ -9,6 +9,123 @@ python3 tools/fbx_inspect.py <candidate>.fbx
 
 ---
 
+## ACCEPTED — `C4_bomb.fbx` — "C4 bomb | CS2" by Alex (2026-09-20)
+
+**Status:** shipping asset. Built into `public/models/c4-device.glb` by
+`tools/build_device_glb.py`. The GLB is gitignored; the script is the record.
+
+**Licence, as the download dialog states it:** CC Attribution — "Author must be
+credited. Commercial use is allowed." Credit string offered by Sketchfab:
+*"C4 bomb | CS2" by Alex is licensed under Creative Commons Attribution.*
+
+> **The attribution is a condition, not a courtesy.** CC-BY permits the
+> commercial use this landing page makes of it *only while* the credit is
+> displayed. Nothing on the site carries it yet. Until it does, the page is
+> using the asset outside its licence — see "Outstanding" below.
+
+**Naming.** The internal names are Valve's: `body_hd_weapon_c4`,
+`weapon_c4`, `controlpanel0_c4_panorama_control_panel`, and the albedo reads
+"DEMOLITION CHARGE / TNT EQUIVALENT". Gate 0.2 as written rejects this, and it
+rejected the earlier `C4-1.fbx` on the same evidence. The project owner
+reviewed that and decided the listing's licence grant governs: the naming is
+the uploader's problem, the download is free and the grant is explicit. Recorded
+here as a decision, not an oversight, so the next person reading gate 0.2 knows
+it was seen and answered rather than missed.
+
+**Inspector output, 2026-09-20:**
+
+```
+FBX version 7400, 664796 bytes
+
+=== Object counts by type ===
+  Geometry             2
+  Model                2
+  Material             2
+
+=== Models (scene objects) ===
+  [Mesh        ] body_hd_weapon_c4
+  [Mesh        ] controlpanel0_c4_panorama_control_panel
+
+=== Geometry (meshes) ===
+  body_hd_weapon_c4_mesh         verts=  14371  polys= 17937  tris≈  17937
+  controlpanel0_c4_panorama_control_panel_mesh verts=     24  polys=    12
+
+  TOTAL: verts=14395  tris≈17949
+
+=== Deformers (skinning/rig) ===
+  0 deformer(s) -> NOT rigged
+
+=== Animation ===
+  AnimationStack: 0
+```
+
+| Gate | Result | Evidence |
+|---|---|---|
+| 0.2 Provenance | **WAIVED** | Valve-derived naming, CC-BY grant on the listing. Owner's decision, above. |
+| 0.3 Split | **PASS** | 430 loose parts, grouped into the five `SectionId` sets. |
+| 0.4 Close-up | **PASS** | 17,937 triangles, with 4k colour / normal / roughness / AO maps. |
+
+**Textures shipped:** colour, roughness and normal, resized to 1024 and exported
+as JPEG-85. AO is not wired — glTF occlusion needs a separate channel and the
+scene's lighting does not call for it. Lossless PNG at the same resolution
+makes a 28 MB GLB; this is 2.4 MB.
+
+### Measured, as built
+
+As imported: 0.2678 x 0.1893 x 0.0832 m — longest 26.8 cm, inside Step 3.2's
+0.2–0.3 m target with no correction factor. This is the first candidate that did
+not import at the wrong scale.
+
+The build rotates the long axis onto glTF +Y and the face onto +Z, then scales
+by 933.5 so the longest dimension is 250 in the scene's millimetre units:
+
+| Axis | Built (scene units) | `REFERENCE_BOUNDS` |
+|---|---|---|
+| x | 177 | 165.5 |
+| y | 250 | 250 |
+| z | 78 | 81.4 |
+
+`REFERENCE_BOUNDS` was a framing approximation taken from the rejected asset.
+The real device is within 7% of it on every axis, so the camera path, the
+placeholder's proportions and the Section 5 framing all stand unchanged.
+
+### How the 430 parts were grouped
+
+| Group | Rule | Parts |
+|---|---|---|
+| `charges` | below the slab top (z < 0.019), tan (hue 15–60, sat > 0.3), bucketed into three brick bands by y | 5 / 6 / 6 |
+| `casing` | below the slab top, not tan — the tape strapping, the backing sheet and the detonator leads | 69 |
+| `arm` | on the deck, inside the switch box (x > 0.040, y > 0.030) — the red arming switch and its cable | 20 |
+| `harness` | on the deck, saturated (sat > 0.5) — the red, yellow and black cable runs | 35 |
+| `panel` | everything else on the deck — board, keypad, components, and the LCD plane | 288 |
+
+The three brick bands are `y` ∈ [0.0216, 0.0759], [-0.0321, 0.0219],
+[-0.0858, -0.0315], measured from the two intact end bricks. The middle brick is
+fragmented into faces and caps in the source, which is why bands are used rather
+than loose-part identity.
+
+`DisplayAnchor` is measured off the LCD plane *after* the transforms, not
+reconstructed from model-space coordinates — the rotation, the scale and the
+recentring all have to agree, and asking the object where it ended up cannot
+disagree with itself. The screen is 72 x 18 scene units, landscape, which is
+close to the readout shell's 87.6 x 28.3; the shell currently overhangs the
+bezel slightly.
+
+### Outstanding
+
+- ~~The CC-BY credit is not on the site.~~ **Done.** `src/components/Credits.tsx`
+  pins it to the bottom of the viewport in all three render branches, outside
+  the `<Canvas>` so the scrub cannot move it off screen. The strings live in
+  `src/content/credits.ts`. One gap remains: the Sketchfab listing URL is not
+  recorded, so the credit names the work and author but does not link to the
+  work. Paste the URL into `CREDITS[0].href` and it links.
+- The readout shell overhangs the model's LCD bezel. Tuning `<Html scale>` in
+  `DisplayPanel` from 14.6 toward ~12 would seat it inside the screen.
+- `charge_3` is 250 units long against its siblings' 226 — it has picked up a
+  full-length part that belongs in `casing`.
+
+---
+
 ## REJECTED — `C4-1.fbx` (Sketchfab `617d7546…`)
 
 **Status:** local development placeholder only. Never commit, never deploy.

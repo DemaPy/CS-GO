@@ -48,6 +48,12 @@ c4-explosive/
 
 .DS_Store
 
-# Local-only dev model built from the REJECTED placeholder asset (plan Step 9.1).
-# Never commit: its geometry is decompiled Valve work and Step 11.4 greps for it.
-/public/models/
+# public/models: opt-in, not opt-out.
+#
+# `dev-device.glb` was built from the asset REJECTED at the Step 0 provenance
+# gate and must never enter git history — Step 11.4 greps for it. The licensed
+# CC-BY device is committed, because the site cannot render without it and it
+# is only 2.4MB. Anything new here stays ignored until someone decides
+# otherwise, which is the point of listing the exception rather than the rule.
+/public/models/*
+!/public/models/c4-device.glb

@@ -1,5 +1,7 @@
 import type { Object3D } from 'three'
 
+import type { SectionId } from '@/content/sections'
+
 /**
  * The seam that makes the 3D model a swappable dependency.
  *
@@ -70,3 +72,29 @@ export function smoothstep(t: number): number {
   const c = t < 0 ? 0 : t > 1 ? 1 : t
   return c * c * (3 - 2 * c)
 }
+
+/**
+ * The device's colours, keyed by the section that seats each group.
+ *
+ * Both rigs paint from this: the placeholder builds its boxes with it, and the
+ * glTF rig tints any group whose exported material carries no texture. One
+ * table, so "what colour is the casing" cannot have two answers depending on
+ * which rig is mounted.
+ *
+ * Straight from the Visual Direction palette in `globals.css`. The panel is
+ * darkest so the display green has somewhere to land — the green itself is
+ * absent here, because scarcity is the whole point of it.
+ */
+export const PART_COLOR: Record<SectionId, number> = {
+  casing: 0x2f3428, // olive drab, shaded down — it sits behind everything
+  charges: 0x3f4536, // --canvas
+  harness: 0x8a6e3b, // --brass
+  panel: 0x14180f, // near-black, waiting for the readout
+  arm: 0x8a6e3b, // --brass, same metal as the harness
+}
+
+/** The groups that read as metal rather than painted body. */
+export const METAL_SECTIONS: ReadonlySet<SectionId> = new Set<SectionId>([
+  'harness',
+  'arm',
+])

@@ -1,7 +1,21 @@
-import { Box3, Euler, Group, Object3D, Quaternion, Vector3 } from 'three'
+import {
+  Box3,
+  Euler,
+  Group,
+  Material,
+  MeshStandardMaterial,
+  Object3D,
+  Quaternion,
+  Vector3,
+} from 'three'
 
 import { SECTIONS, subProgress, type SectionId } from '@/content/sections'
-import { smoothstep, type AssemblyRig } from './types'
+import {
+  METAL_SECTIONS,
+  PART_COLOR,
+  smoothstep,
+  type AssemblyRig,
+} from './types'
 
 /**
  * The Phase 2 rig: the same `AssemblyRig` contract as the placeholder, driven
@@ -135,6 +149,55 @@ function splitIntoPivots(group: Object3D): Object3D[] {
   return pivots
 }
 
+/**
+ * Paints an untextured group in the site palette, and leaves a textured one
+ * alone.
+ *
+ * The dev export carries a single material named `device-body` with no maps,
+ * so every group renders the same pale grey — against an olive-black ground
+ * the whole device reads as one washed-out mass, and at full camera push it
+ * swamps the Section 5 headline. The placeholder rig never had this problem
+ * because it paints its boxes from `PART_COLOR`; this brings the glTF to the
+ * same palette so the two rigs are the same device in two levels of detail,
+ * not two different-looking objects.
+ *
+ * **A material that carries a texture is left untouched.** That is the whole
+ * guard: a handcrafted model with its own maps has already answered the colour
+ * question, and overriding it would silently throw that work away. Only a
+ * material with nothing on it gets an opinion imposed.
+ *
+ * Materials are CLONED before being written to. `useGLTF` caches the loaded
+ * scene and `clone()` shares materials with it, so tinting in place would leak
+ * into every other mount of the same model — and into drei's cache for the
+ * rest of the session.
+ */
+function paint(group: Object3D, section: SectionId, owned: Material[]): void {
+  const metal = METAL_SECTIONS.has(section)
+
+  group.traverse((node) => {
+    const mesh = node as { isMesh?: boolean; material?: Material | Material[] }
+    if (!mesh.isMesh || !mesh.material) return
+
+    const slots = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+
+    const painted = slots.map((slot) => {
+      const std = slot as MeshStandardMaterial
+      // Anything with a map, or a material type that has no colour to set, is
+      // the author's decision and stays as exported.
+      if (!std.isMeshStandardMaterial || std.map) return slot
+
+      const copy = std.clone()
+      copy.color.setHex(PART_COLOR[section])
+      copy.roughness = metal ? 0.35 : 0.72
+      copy.metalness = metal ? 0.8 : 0.15
+      owned.push(copy)
+      return copy
+    })
+
+    mesh.material = Array.isArray(mesh.material) ? painted : painted[0]
+  })
+}
+
 export function createGltfRig(source: Object3D): AssemblyRig {
   // Cloned, not used directly: `useGLTF` caches the loaded scene, so mutating
   // it in place would leak this rig's transforms into the next mount. A clone
@@ -147,12 +210,16 @@ export function createGltfRig(source: Object3D): AssemblyRig {
   const parts: Part[] = []
   const parentScale = new Vector3()
   const offset = new Vector3()
+  /** Materials this rig cloned, and is therefore allowed to free. */
+  const owned: Material[] = []
 
   for (const section of SECTIONS) {
     const object = root.getObjectByName(section.id)
     if (!object) {
       throw new Error(`glTF rig: model has no "${section.id}" group`)
     }
+
+    paint(object, section.id, owned)
 
     // The charges section animates one brick at a time when the model provides
     // more than one; everything else moves as a single group.
@@ -274,13 +341,14 @@ export function createGltfRig(source: Object3D): AssemblyRig {
     seek,
     displayAnchor,
     dispose() {
-      // Intentionally empty. This rig owns no GPU resources: `clone()` copies
-      // the node graph but shares geometries and materials with drei's glTF
-      // cache, so freeing them here would blank every other mount of the same
-      // model. The cloned nodes are plain objects — R3F detaches them from the
-      // scene on unmount and they are then garbage like anything else.
+      // Only the materials `paint` cloned. Geometries, and any material left
+      // as the model exported it, are shared with drei's glTF cache — freeing
+      // those would blank every other mount of the same model. The cloned
+      // nodes are plain objects: R3F detaches them from the scene on unmount
+      // and they are then garbage like anything else.
+      for (const material of owned) material.dispose()
       //
-      // It must also stay a no-op rather than `root.clear()`. React StrictMode
+      // It must NOT clear the node graph. React StrictMode
       // double-invokes effects against the same component instance, while the
       // `useMemo` that built this rig is NOT recomputed between the two passes
       // — so a destructive dispose empties the very rig the remounted component

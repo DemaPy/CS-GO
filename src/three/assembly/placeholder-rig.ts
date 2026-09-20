@@ -10,7 +10,13 @@ import {
 } from 'three'
 
 import { SECTIONS, subProgress, type SectionId } from '@/content/sections'
-import { REFERENCE_BOUNDS as B, smoothstep, type AssemblyRig } from './types'
+import {
+  METAL_SECTIONS,
+  PART_COLOR,
+  REFERENCE_BOUNDS as B,
+  smoothstep,
+  type AssemblyRig,
+} from './types'
 
 /**
  * One movable piece. `start` and `end` are absolute transforms, never deltas —
@@ -99,19 +105,6 @@ const PARTS: PartSpec[] = [
   },
 ]
 
-/**
- * Straight from the Visual Direction palette. The panel is darkest so the
- * display green has somewhere to land in Step 6 — the green itself appears
- * nowhere in this file, because scarcity is the whole point of it.
- */
-const PART_COLOR: Record<SectionId, number> = {
-  casing: 0x2f3428, // olive drab, shaded down — it sits behind everything
-  charges: 0x3f4536, // --canvas
-  harness: 0x8a6e3b, // --brass
-  panel: 0x14180f, // near-black, waiting for the readout
-  arm: 0x8a6e3b, // --brass, same metal as the harness
-}
-
 interface Part {
   object: Mesh
   section: SectionId
@@ -137,12 +130,14 @@ export function createPlaceholderRig(): AssemblyRig {
 
   for (const spec of PARTS) {
     const geometry = new BoxGeometry(...spec.size)
+    // The harness and the arming switch are the metal parts — oxidised brass,
+    // so they read as a different material from the olive-drab body rather
+    // than a darker box. Same split the glTF rig paints with.
+    const metal = METAL_SECTIONS.has(spec.section)
     const material = new MeshStandardMaterial({
       color: PART_COLOR[spec.section],
-      // The harness is the one metal part — oxidised brass, so it reads as a
-      // different material from the olive-drab body rather than a darker box.
-      roughness: spec.section === 'harness' ? 0.35 : 0.72,
-      metalness: spec.section === 'harness' ? 0.8 : 0.15,
+      roughness: metal ? 0.35 : 0.72,
+      metalness: metal ? 0.8 : 0.15,
     })
     geometries.push(geometry)
     materials.push(material)
@@ -190,10 +185,26 @@ export function createPlaceholderRig(): AssemblyRig {
     root,
     seek,
     displayAnchor,
+    /**
+     * Frees the GPU resources this rig owns — and deliberately leaves the node
+     * graph alone.
+     *
+     * `root.clear()` used to be the last line here, and it is what made the
+     * error-boundary fallback in `Experience` render nothing at all: when the
+     * glTF branch throws, React recovers by re-rendering, which runs this
+     * cleanup against a `useMemo` result that is NOT rebuilt on the pass that
+     * follows. The rig the remounted component goes on using is then an empty
+     * `Group` — `__rig.root.children.length === 0`, a canvas with a scene in it
+     * and nothing to see. React StrictMode's double-invoked effects do the same
+     * thing for the same reason; `gltf-rig`'s dispose carries the same note.
+     *
+     * Detaching children is unrecoverable. Disposing geometries and materials
+     * is not: three re-uploads them on the next frame that needs them, so a
+     * spurious call costs one upload rather than the whole device.
+     */
     dispose() {
       for (const g of geometries) g.dispose()
       for (const m of materials) m.dispose()
-      root.clear()
     },
   }
 }

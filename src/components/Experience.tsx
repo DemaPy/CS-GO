@@ -5,25 +5,19 @@ import { Canvas, createPortal, useFrame, useThree } from '@react-three/fiber'
 import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { Object3D, Vector3, type PerspectiveCamera } from 'three'
 
+import { Credits } from '@/components/Credits'
+import { DeviceModelBoundary } from '@/components/DeviceModelBoundary'
 import { DisplayPanel } from '@/components/DisplayPanel'
 import { Overlay } from '@/components/Overlay'
 import { SECTIONS, subProgress } from '@/content/sections'
+import {
+  DEVICE_MODEL_REASON,
+  DEVICE_MODEL_URL,
+} from '@/lib/device-model'
 import { useMediaQuery, useReducedMotion } from '@/lib/use-reduced-motion'
 import { createGltfRig } from '@/three/assembly/gltf-rig'
 import { createPlaceholderRig } from '@/three/assembly/placeholder-rig'
 import { REFERENCE_BOUNDS as B, smoothstep, type AssemblyRig } from '@/three/assembly/types'
-
-/**
- * Local-only dev model. `public/models/` is gitignored, so this file exists on
- * the machine that generated it and nowhere else.
- *
- * Set to `false` to fall back to the procedural placeholder — which is what
- * anyone cloning this repo gets, because the model is not in it. The asset it
- * was built from has NOT passed the plan's Step 0 vetting gate and must never
- * be deployed; this constant is the whole switch.
- */
-const USE_DEV_MODEL = false
-const DEV_MODEL_URL = '/models/dev-device.glb'
 
 /** Scroll range over which the camera pushes toward the display (Step 5.4). */
 const CAMERA_PUSH: [number, number] = [0.8, 1.0]
@@ -82,12 +76,37 @@ interface DeviceProps {
 }
 
 /**
- * Picks the rig. `USE_DEV_MODEL` is a module constant, so this branch is fixed
- * for the life of the process — each child keeps its own stable hook order,
+ * Picks the rig.
+ *
+ * `DEVICE_MODEL_URL` is a module constant — `NEXT_PUBLIC_*` values are inlined
+ * at build time — so this branch is fixed for the life of the process. That is
+ * load-bearing, not incidental: each child keeps its own stable hook order,
  * which a conditional `useGLTF` inside one component would not.
+ *
+ * When a model is configured it is still only a *preference*. The boundary
+ * demotes it to the placeholder if the file is missing or the export is wrong,
+ * so a bad asset costs the device, never the page.
+ *
+ * There is deliberately NO `<Suspense>` inside the boundary. The obvious
+ * version wraps `GltfDevice` in one to keep the pending state local — and it
+ * breaks the readout. `DisplayPanel`'s drei `<Html>` attaches to whatever
+ * element R3F has `events.connected` to at the moment it mounts, and
+ * `ScrollControls` swaps that to its own scrolling div during its effect. An
+ * inner boundary changes when the model's subtree commits relative to that
+ * swap, so the readout lands in the scrolled container instead of the fixed
+ * one: at full scroll it sits exactly `scrollTop` pixels above the viewport
+ * (measured: y = 213 without it, y = -3402 with it, scrollTop 3615) and the
+ * display is simply not on screen. The outer `<Suspense>` at each call site
+ * already covers the load, and covering it twice is what costs the display.
  */
 function Device(props: DeviceProps) {
-  return USE_DEV_MODEL ? <GltfDevice {...props} /> : <PlaceholderDevice {...props} />
+  if (!DEVICE_MODEL_URL) return <PlaceholderDevice {...props} />
+
+  return (
+    <DeviceModelBoundary fallback={<PlaceholderDevice {...props} />}>
+      <GltfDevice {...props} url={DEVICE_MODEL_URL} />
+    </DeviceModelBoundary>
+  )
 }
 
 function PlaceholderDevice(props: DeviceProps) {
@@ -95,10 +114,9 @@ function PlaceholderDevice(props: DeviceProps) {
   return <DeviceScene {...props} rig={rig} />
 }
 
-/** Suspends while the model loads — both call sites already wrap Device in a
- *  <Suspense> boundary, so there is nothing extra to plumb here. */
-function GltfDevice(props: DeviceProps) {
-  const { scene } = useGLTF(DEV_MODEL_URL)
+/** Suspends while the model loads; see `Device` for the boundary around it. */
+function GltfDevice({ url, ...props }: DeviceProps & { url: string }) {
+  const { scene } = useGLTF(url)
   const rig = useMemo(() => createGltfRig(scene), [scene])
   return <DeviceScene {...props} rig={rig} />
 }
@@ -305,6 +323,17 @@ export function Experience() {
   const reduced = useReducedMotion()
   const desktop = useMediaQuery('(min-width: 768px)')
 
+  // Which rig is on screen, said out loud once per load. The two rigs are
+  // deliberately similar in silhouette, so "is this the model or the boxes?"
+  // is a real question to ask of a screenshot — and a mistyped env var looks
+  // identical to a model that failed to load. Dev only; stripped from
+  // production builds by the NODE_ENV guard.
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.info('[device-model]', DEVICE_MODEL_REASON)
+    }
+  }, [])
+
   // Both are null until mounted. Rendering the copy alone on the server keeps
   // the content real without a canvas or a progress value in the HTML — the
   // hydration mismatch Step 8.5 forbids.
@@ -312,6 +341,7 @@ export function Experience() {
     return (
       <main className="relative">
         <Overlay />
+        <Credits />
       </main>
     )
   }
@@ -336,6 +366,7 @@ export function Experience() {
         <div className="relative">
           <Overlay />
         </div>
+        <Credits />
       </main>
     )
   }
@@ -363,6 +394,10 @@ export function Experience() {
           </ScrollControls>
         </Suspense>
       </Canvas>
+      {/* Outside the <Canvas> deliberately: inside `<Scroll html>` it would
+          ride the scroll and only be on screen for part of the page, which is
+          the one thing a required credit may not do. */}
+      <Credits />
     </main>
   )
 }
