@@ -418,13 +418,17 @@ is what makes the result mean anything.
   placeholder never suspends, so its memo and its rig stay in step.
 
 - **The display anchor must be unit-scale.** `DisplayPanel` is portalled into
-  `displayAnchor`, so it inherits that node's scale. An exported model carries
-  its unit conversion as a scale on an ancestor (0.0231 here), which rendered
-  the display shell ~43x too small — a few black pixels in the middle of a
-  hugely magnified keypad — while the camera still pushed in to frame a shell it
-  believed was `PANEL_WIDTH` metres wide. `createGltfRig` now normalises the
-  anchor to world scale 1 (measured: 1.0000). The placeholder is unit-scale
-  throughout, which is the only reason the measured constants worked.
+  `displayAnchor`, so it inherits that node's scale. The first export carried
+  its unit conversion as a scale on an ancestor (0.0231), which rendered the
+  display shell ~43x too small.
+
+  **The first fix for this was wrong and has been removed.** It cancelled the
+  0.0231 by giving the anchor a local scale of 43.29. World scale then measured
+  1.0000, which looked correct, but drei builds its CSS matrix from that node
+  and a 43x local scale inside a 0.0231 parent inflated drei's container to
+  ~6,000,000 x 7,300,000 px. The scale is now baked into the geometry on export
+  instead, so no node carries one; `createGltfRig` checks this and warns rather
+  than correcting it, because correcting it here is what caused the damage.
 
 ### Step 9.4 — the one-line swap does NOT hold
 
@@ -478,21 +482,55 @@ collision in lighter ink. Verified by sweeping progress in steps of 1e-4 and
 asserting opacity is 0 at every value where the blocks intersect; `[0.80, 0.88]`
 fails 432 of those samples, `[0.80, 0.83]` fails none.
 
-**The readout blinks while scrolling — specific to the glTF rig.**
-`DisplayPanel` occludes by raycasting from the camera to the anchor against
-`displayAnchor.parent`. For the placeholder that parent is one flat box with the
-anchor squarely in front, so no ray can clip it. For the glTF rig it is the
-`panel` group of 13 meshes — a plate and a 4x3 grid of keypad tiles — and the
-exported anchor cleared them by 0.5 mm. Over tiles ~10 mm wide that is about 3
-degrees of angular margin, so as the camera swings off-axis during the scroll
-the ray grazes a neighbouring tile and drei hides the element for a frame.
+**The readout blinked, vanished at full scroll, and flipped between viewport
+widths of 1993 and 1994 — one cause, three symptoms.**
 
-Fixed by standing the anchor 4 mm off the panel face in `createGltfRig`
-(~22 degrees of margin, covering the whole Section 5 camera path).
-**Not visually confirmed** — the automated browser tab could not initialise a
-WebGL context, so `<Canvas>` rendered with no children and neither rig ever
-mounted there. The reasoning and the arithmetic are sound; the flicker itself
-needs a human to eyeball.
+Three hypotheses were tested and rejected before the real one. Recorded because
+each looked convincing:
+
+1. *Occlusion grazing the keypad tiles.* The anchor cleared the 13-mesh panel
+   group by 0.5 mm, about 3 degrees of angular margin. Standing it off 4 mm did
+   not fix it, and disabling occlusion entirely did not either — so occlusion
+   was exonerated by experiment, and the clearance was reverted.
+2. *drei's container being millions of pixels.* True, but normal: the working
+   state had one too.
+3. *The 43x anchor scale.* A real defect (see above), fixed by baking the scale
+   into the export — but not this bug.
+
+The cause is that **drei's `Html` transform mode treats world units as CSS
+pixels for translation**. `getObjectCSSMatrix` scales the basis by 1/40 and
+leaves translation at x1, so a scene authored in metres put the camera 0.107
+units — therefore 0.107 *pixels* — from a CSS perspective origin of 1772.9 px.
+The readout sat 0.006% of the way from the eye plane at ~16,600x magnification,
+where any sub-pixel float change pushes it to or past the eye and the browser
+stops painting it.
+
+Confirmed by modelling drei's maths and reproducing all three values from a
+DOM dump taken in the broken state:
+
+| | predicted | observed |
+|---|---|---|
+| perspective / outer `translateZ` | 1772.92 | 1772.78 |
+| `matrix3d` scale | 0.000365 | 0.000365 |
+| rendered shell width | 1453 px | 1453 px |
+
+Fixed by authoring the scene in **millimetres**: every world-space value moved
+by the same 1000x — `REFERENCE_BOUNDS`, `BASE_POS`, `PANEL_WIDTH`/`_HEIGHT`,
+the camera position and near/far, both rigs' scatter offsets, the anchor
+clearance, the `<Html>` scale, and the GLB export.
+
+| | before | after |
+|---|---|---|
+| margin from the CSS eye plane | 0.107 px | 106.85 px |
+| magnification | 16,592x | 17x |
+| projected shell width | 1453 px | 1453 px |
+
+The last row is the check that matters: the projected size goes as
+`scale x P/(P - z)`, and `P - z` is the camera distance in world units, so
+scaling both by 1000 cancels exactly. Ratios are unchanged, so the framing
+maths and the on-screen size are untouched — only the numerical headroom moved.
+
+Confirmed working by the operator at both 1993 and 1994 px.
 
 `ReactDOMClient.createRoot()` errors ("called on a container that has already
 been passed to createRoot") fire on every load. **They predate this work** —

@@ -26,9 +26,29 @@ export interface AssemblyRig {
 }
 
 /**
- * Reference bounding box in metres, measured from `C4-1.fbx` in Blender and
- * corrected by 0.0231 (it imports ~43x oversized). Recorded in
- * `docs/asset-provenance.md`.
+ * Reference bounding box in MILLIMETRES, measured from `C4-1.fbx` in Blender
+ * and corrected by 0.0231 (it imports ~43x oversized), then taken to mm.
+ * Recorded in `docs/asset-provenance.md`.
+ *
+ * ## Why millimetres and not metres
+ *
+ * The obvious choice is metres, and it is wrong here. drei's `Html` in
+ * `transform` mode writes the object's world translation straight into a CSS
+ * matrix as pixels — `getObjectCSSMatrix` scales the basis by 1/40 but leaves
+ * translation at x1. In metres the camera ends up ~0.107 units from the panel,
+ * so in CSS it sits 0.107px from a perspective origin of ~1773px: 0.006% of
+ * the way, magnified ~16,600x. At that margin a sub-pixel float change — one
+ * pixel of viewport width, one scroll frame — pushes the readout to or past the
+ * eye plane and the browser stops painting it. That was one bug wearing three
+ * masks: the readout blinking while scrolling, vanishing at full scroll, and
+ * flipping between viewport widths of 1993 and 1994.
+ *
+ * At 1000x the camera sits ~107 units back, so the CSS margin is ~107px and
+ * magnification drops to ~17x, which is an ordinary, stable projection.
+ *
+ * Everything in world space scales together — see `BASE_POS`, `PANEL_WIDTH`,
+ * the camera's near/far, both rigs' scatter offsets, and the `scale` on
+ * `<Html>`. Ratios are unchanged, so the framing maths is untouched.
  *
  * The aspect ratio is a framing approximation, not a real-world measurement —
  * it matches neither an M112 charge nor obviously a satchel. Only the
@@ -36,9 +56,9 @@ export interface AssemblyRig {
  * shipped device is a different shape, the Section 5 camera path is what breaks.
  */
 export const REFERENCE_BOUNDS = {
-  x: 0.1655,
-  y: 0.25,
-  z: 0.0814,
+  x: 165.5,
+  y: 250,
+  z: 81.4,
 } as const
 
 /**

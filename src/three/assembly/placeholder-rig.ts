@@ -36,8 +36,8 @@ interface PartSpec {
  * ## Scatter constraint
  *
  * Start transforms must sit **outside the frame** but never **between the
- * device and the lens**. With the camera at z=0.55 and fov 35, the visible
- * half-extents at z=0 are ~0.174 (y) and ~0.278 (x on a 16:10 viewport), so a
+ * device and the lens**. With the camera at z=550 and fov 35, the visible
+ * half-extents at z=0 are ~174 (y) and ~278 (x on a 16:10 viewport), so a
  * part is off-frame past those. Pushing a part toward +z instead puts it
  * through the near plane, where it fills the viewport as an unreadable black
  * mass — parts scatter sideways, up, down, and *behind*, never forward.
@@ -49,7 +49,7 @@ const PARTS: PartSpec[] = [
     size: [B.x, B.y, B.z * 0.45],
     end: { pos: [0, 0, -B.z * 0.275] },
     // rises from below the frame
-    start: { pos: [0, -0.42, -B.z * 0.9], rot: [0, 0, 0.5] },
+    start: { pos: [0, -420, -B.z * 0.9], rot: [0, 0, 0.5] },
   },
 
   // Four charges, 2x2 on the casing face. Each flies in from its own corner so
@@ -66,7 +66,7 @@ const PARTS: PartSpec[] = [
     end: { pos: [sx * B.x * 0.245, sy * B.y * 0.245, B.z * 0.1] },
     // in from its own off-frame corner, and from behind
     start: {
-      pos: [sx * 0.46, sy * 0.34, -0.11],
+      pos: [sx * 460, sy * 340, -110],
       rot: [sy * 0.7, sx * 0.7, sx * sy * 0.4],
     },
   })),
@@ -79,7 +79,7 @@ const PARTS: PartSpec[] = [
     // Slides in from off-frame RIGHT. Coming from the left would drag it
     // straight across the copy column, which sits in the left third on
     // desktop — a part crossing the headline reads as a bug, not assembly.
-    start: { pos: [0.62, 0, B.z * 0.36], rot: [0, 0, 1.2] },
+    start: { pos: [620, 0, B.z * 0.36], rot: [0, 0, 1.2] },
   },
   {
     name: 'panel',
@@ -87,7 +87,7 @@ const PARTS: PartSpec[] = [
     size: [B.x * 0.62, B.y * 0.3, B.z * 0.1],
     end: { pos: [0, B.y * 0.28, B.z * 0.42] },
     // drops in from above the frame, tilted
-    start: { pos: [0, 0.42, B.z * 0.42], rot: [0.9, 0, 0] },
+    start: { pos: [0, 420, B.z * 0.42], rot: [0.9, 0, 0] },
   },
   {
     name: 'arm_switch',
@@ -95,7 +95,7 @@ const PARTS: PartSpec[] = [
     size: [B.x * 0.16, B.y * 0.075, B.z * 0.1],
     end: { pos: [0, -B.y * 0.34, B.z * 0.42] },
     // up from below the frame
-    start: { pos: [0, -0.4, B.z * 0.42], rot: [0, 0, 1.5] },
+    start: { pos: [0, -400, B.z * 0.42], rot: [0, 0, 1.5] },
   },
 ]
 
@@ -169,7 +169,7 @@ export function createPlaceholderRig(): AssemblyRig {
 
   const displayAnchor = new Object3D()
   displayAnchor.name = 'display-anchor'
-  displayAnchor.position.set(0, 0, (B.z * 0.1) / 2 + 0.0005)
+  displayAnchor.position.set(0, 0, (B.z * 0.1) / 2 + 0.5)
   panel.object.add(displayAnchor)
 
   function seek(progress: number): void {

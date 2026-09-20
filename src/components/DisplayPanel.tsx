@@ -13,6 +13,13 @@ import { CaptureInput, firstEmailError } from '@/lib/schema'
 const FADE_FROM = 0.8
 const FADE_TO = 0.9
 
+/**
+ * Occlusion is NOT the cause of the readout vanishing — that was tested by
+ * disabling it, and the readout still disappeared. See docs/verification.md.
+ * Kept on, as designed in Step 6.4.
+ */
+const OCCLUDE_ENABLED = true
+
 type Status = 'idle' | 'sending' | 'opening' | 'error' | 'captured'
 
 /**
@@ -129,20 +136,21 @@ export function DisplayPanel({
   return (
     <Html
       transform
-      // drei applies its own px-to-unit ratio on top of `scale`, so this is
-      // calibrated by measurement, not derived: 78px at scale 0.0013 rendered
-      // ~0.0027 m, i.e. ~2.09 world units per unit of scale per 78px.
-      // The shell is 240px here so it can use ordinary font sizes rather than
-      // a 5px base magnified 12x; scale drops to match.
-      //   240px -> 2.09 * (240/78) = 6.43 units per unit of scale
-      //   0.0146 * 6.43 = 0.094 m, just inside the panel's 0.103 m face.
-      scale={0.0146}
+      // Scales with the world. The scene is authored in millimetres (see
+      // REFERENCE_BOUNDS for why metres cannot work here), so this is the old
+      // metre-based 0.0146 taken up by the same 1000x.
+      //
+      // The on-screen size is unchanged by that move: projected size goes as
+      // scale x P/(P - z), and P - z is the camera distance in world units, so
+      // scaling both the scale and the distance by 1000 cancels exactly. What
+      // changes is the margin from the CSS eye plane — 0.107px to ~107px.
+      scale={14.6}
       // Step 6.4: a raycast approximation, and with the Section 5 camera fixed
       // by Step 5.4 this is a one-time tune rather than a per-frame problem.
       // The cast is safe and the guard is what makes it so: drei's type wants a
       // non-null RefObject, and `.current` is assigned at rig construction.
       occlude={
-        occludeAgainst?.current
+        OCCLUDE_ENABLED && occludeAgainst?.current
           ? [occludeAgainst as RefObject<Object3D>]
           : undefined
       }

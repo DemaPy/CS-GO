@@ -42,23 +42,24 @@ const CAMERA_PUSH: [number, number] = [0.8, 1.0]
 const FADE_STAGE_FOUR: [number, number] = [0.8, 0.83]
 
 /**
- * Framing distance. Device longest dimension is 0.25 m at 35° fov, which needs
- * 0.40 m to fit exactly — 0.55 leaves margin so the assembled device is not
- * flush against the frame edge.
+ * Framing distance, in the millimetre world units set by REFERENCE_BOUNDS.
+ * Device longest dimension is 250 at 35° fov, which needs 400 to fit exactly —
+ * 550 leaves margin so the assembled device is not flush against the frame
+ * edge.
  */
-const BASE_POS = new Vector3(0, 0, 0.55)
+const BASE_POS = new Vector3(0, 0, 550)
 
 /**
  * World width of the display shell. Measured, not derived: at a known camera
- * distance the shell rendered 926px of a 1440px viewport, giving ~0.0876 m.
+ * distance the shell rendered 926px of a 1440px viewport, giving ~87.6 units.
  */
-const PANEL_WIDTH = 0.0876
+const PANEL_WIDTH = 87.6
 
 /**
  * World height of the shell. Measured: 922x298 px at 1280x800, so the shell
- * renders at ~3.09:1, giving 0.0876 / 3.09.
+ * renders at ~3.09:1, giving 87.6 / 3.09.
  */
-const PANEL_HEIGHT = 0.0283
+const PANEL_HEIGHT = 28.3
 
 /** Share of the frame the panel may occupy at full push, per axis. */
 const PANEL_WIDTH_FRACTION = 0.72
@@ -297,7 +298,7 @@ function Lighting() {
 const CANVAS_PROPS = {
   // Step 8.3: cap retina cost. This is the first lever if Lighthouse dips.
   dpr: [1, 2] as [number, number],
-  camera: { position: [0, 0, 0.55] as [number, number, number], fov: 35, near: 0.01, far: 10 },
+  camera: { position: [0, 0, 550] as [number, number, number], fov: 35, near: 10, far: 10000 },
 } as const
 
 export function Experience() {
