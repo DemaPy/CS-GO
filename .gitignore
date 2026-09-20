@@ -47,3 +47,7 @@ next-env.d.ts
 c4-explosive/
 
 .DS_Store
+
+# Local-only dev model built from the REJECTED placeholder asset (plan Step 9.1).
+# Never commit: its geometry is decompiled Valve work and Step 11.4 greps for it.
+/public/models/

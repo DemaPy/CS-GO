@@ -365,3 +365,98 @@ how hand-maintained text parts rot.
 - **Domain verification is still required** to mail arbitrary addresses.
   `onboarding@resend.dev` reaches only the account owner and Resend's own test
   addresses.
+
+## Phase 2 (local only) — the glTF rig against real geometry
+
+**This is not a Step 9 pass.** The model it runs on is the REJECTED Sketchfab
+asset (`docs/asset-provenance.md`), used here only to exercise the
+`AssemblyRig` seam against real geometry. Step 9.1 forbids shipping it.
+
+The GLB lives at `public/models/dev-device.glb`, which is gitignored, so a fresh
+clone has no model. **`USE_DEV_MODEL` in `Experience.tsx` is left `false`** so
+the committed tree renders the placeholder and never fetches a URL that is not
+there. Set it to `true` to see the real model locally. Note that only the asset
+is protected by gitignore — the flag is not, and committing it as `true` gives
+every clone and every deploy a 404 from `useGLTF`. `tsc`, `eslint` and
+`next build` all pass either way, because none of them fetch that URL.
+
+Built headless from the FBX with Blender 5.2.1: split by loose parts (56),
+classified into the five `SectionId` groups by rules that each name a visible
+feature, each group pivoted at its own bbox centre, plus a `DisplayAnchor`
+parented to `panel`.
+
+| Check | Result |
+|---|---|
+| groups tile the mesh | 56 parts = casing 24, charges 3, harness 7, panel 13, arm 9 |
+| exported bounds match `REFERENCE_BOUNDS` | `[0.1655, 0.2498, 0.0814]`, centred on origin |
+| longest axis on Y, panel toward +z | confirmed — exported Z-up so Blender's frame maps 1:1 to the placeholder's |
+| name scrub (Step 11.4 grep) | `w_eq_c4`, `w_models`, `c4.png`, `weapons` all absent; 0 images, material renamed `device-body` |
+| 4.5a `seek(0.5)` twice bit-identical | PASS |
+| 4.5b `seek(1)` → `seek(0)` === `seek(0)` | PASS |
+| 4.5c scrubbed 0.37 === direct 0.37 | PASS |
+| 4.5d 402 seeks, all elements finite | PASS |
+| 4.5e all five groups seated at p=1 | PASS |
+| parts actually travel | panel moves 18.18 local units ≈ 0.42 m, the authored scatter |
+
+Purity was re-run in the browser against the live rig, traversing **65 nodes**.
+An earlier run of the same harness reported four passes while traversing **1**
+node — the root had been emptied, so every comparison was of one node against
+itself. A purity check on an empty scene graph passes trivially; the node count
+is what makes the result mean anything.
+
+### Two bugs this surfaced
+
+- **`dispose()` must not be destructive here.** The rig `clone()`s the cached
+  glTF scene, so it owns no geometries or materials — `root.clear()` freed
+  nothing and only detached the model. Under StrictMode, which double-invokes
+  effects while `useMemo` does *not* recompute, the cleanup emptied the very rig
+  the remounted component went on using, and the scene rendered nothing. It is
+  now a documented no-op. **The placeholder is not affected** — tested by
+  flipping `USE_DEV_MODEL` to `false` and reloading: `root.children.length` is
+  8, not 0. So this is specific to the glTF path, where `useGLTF` suspends and
+  the component is re-rendered on resume without the memo being rebuilt. The
+  placeholder never suspends, so its memo and its rig stay in step.
+
+- **The display anchor must be unit-scale.** `DisplayPanel` is portalled into
+  `displayAnchor`, so it inherits that node's scale. An exported model carries
+  its unit conversion as a scale on an ancestor (0.0231 here), which rendered
+  the display shell ~43x too small — a few black pixels in the middle of a
+  hugely magnified keypad — while the camera still pushed in to frame a shell it
+  believed was `PANEL_WIDTH` metres wide. `createGltfRig` now normalises the
+  anchor to world scale 1 (measured: 1.0000). The placeholder is unit-scale
+  throughout, which is the only reason the measured constants worked.
+
+### Step 9.4 — the one-line swap does NOT hold
+
+The plan asks whether swapping rigs is a one-line change needing no edits
+elsewhere. It is not:
+
+- `useGLTF` suspends, so the glTF path needs its own component to keep hook
+  order stable. `Device` is now a branch over two wrappers.
+- `Experience.tsx` had to learn a rig type it did not previously name.
+- The anchor scale assumption above lived implicitly in `Experience.tsx`'s
+  measured `PANEL_WIDTH` / `PANEL_HEIGHT` constants.
+
+The seam mostly held — `Overlay.tsx`, `sections.ts` and `DisplayPanel.tsx` were
+untouched, and `seek`/`displayAnchor` carried the real model unchanged. But the
+leak is real and the plan says to fix it before Phase 3.
+
+### What was seen in Chrome
+
+Dev server, desktop viewport. Real geometry assembles across the five sections;
+at p=1 the display lights and renders the DSEG14 `ADDRESS` readout, the input
+line and the `ARM` button at roughly 67% of frame width (`PANEL_WIDTH_FRACTION`
+targets 72%). The email input accepts typed text.
+
+Not verified, and not claimed: the invalid-address inline error and the Paddle
+overlay against this model — the readout intermittently rendered at a
+near-zero CSS transform scale after interaction, and browser scripting was cut
+short before the cause was found. It is not a stale portal left by HMR — there
+was exactly one `input[type=email]` in the document at the time. Lighthouse,
+mobile and reduced-motion (Step 8) were not run.
+
+`ReactDOMClient.createRoot()` errors ("called on a container that has already
+been passed to createRoot") fire on every load. **They predate this work** —
+they appear identically with `USE_DEV_MODEL = false` on the placeholder rig.
+Dev-only, from the double-invoked R3F canvas container, but Step 8.5 asks for a
+console-clean walk, so they are the next task's to clear.

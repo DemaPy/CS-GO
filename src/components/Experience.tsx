@@ -1,6 +1,6 @@
 'use client'
 
-import { Scroll, ScrollControls, useScroll } from '@react-three/drei'
+import { Scroll, ScrollControls, useGLTF, useScroll } from '@react-three/drei'
 import { Canvas, createPortal, useFrame, useThree } from '@react-three/fiber'
 import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { Object3D, Vector3, type PerspectiveCamera } from 'three'
@@ -9,8 +9,21 @@ import { DisplayPanel } from '@/components/DisplayPanel'
 import { Overlay } from '@/components/Overlay'
 import { SECTIONS, subProgress } from '@/content/sections'
 import { useMediaQuery, useReducedMotion } from '@/lib/use-reduced-motion'
+import { createGltfRig } from '@/three/assembly/gltf-rig'
 import { createPlaceholderRig } from '@/three/assembly/placeholder-rig'
-import { REFERENCE_BOUNDS as B, smoothstep } from '@/three/assembly/types'
+import { REFERENCE_BOUNDS as B, smoothstep, type AssemblyRig } from '@/three/assembly/types'
+
+/**
+ * Local-only dev model. `public/models/` is gitignored, so this file exists on
+ * the machine that generated it and nowhere else.
+ *
+ * Set to `false` to fall back to the procedural placeholder — which is what
+ * anyone cloning this repo gets, because the model is not in it. The asset it
+ * was built from has NOT passed the plan's Step 0 vetting gate and must never
+ * be deployed; this constant is the whole switch.
+ */
+const USE_DEV_MODEL = false
+const DEV_MODEL_URL = '/models/dev-device.glb'
 
 /** Scroll range over which the camera pushes toward the display (Step 5.4). */
 const CAMERA_PUSH: [number, number] = [0.8, 1.0]
@@ -54,9 +67,43 @@ interface DeviceProps {
   scrub: boolean
 }
 
-function Device({ desktop, scrub }: DeviceProps) {
+/**
+ * Picks the rig. `USE_DEV_MODEL` is a module constant, so this branch is fixed
+ * for the life of the process — each child keeps its own stable hook order,
+ * which a conditional `useGLTF` inside one component would not.
+ */
+function Device(props: DeviceProps) {
+  return USE_DEV_MODEL ? <GltfDevice {...props} /> : <PlaceholderDevice {...props} />
+}
+
+function PlaceholderDevice(props: DeviceProps) {
   const rig = useMemo(() => createPlaceholderRig(), [])
+  return <DeviceScene {...props} rig={rig} />
+}
+
+/** Suspends while the model loads — both call sites already wrap Device in a
+ *  <Suspense> boundary, so there is nothing extra to plumb here. */
+function GltfDevice(props: DeviceProps) {
+  const { scene } = useGLTF(DEV_MODEL_URL)
+  const rig = useMemo(() => createGltfRig(scene), [scene])
+  return <DeviceScene {...props} rig={rig} />
+}
+
+function DeviceScene({
+  desktop,
+  scrub,
+  rig,
+}: DeviceProps & { rig: AssemblyRig }) {
   useEffect(() => () => rig.dispose(), [rig])
+
+  // Dev-only handle, so the Step 4.5 purity checks can be run against the rig
+  // that is actually on screen rather than a reconstruction of it. Stripped
+  // from production builds by the NODE_ENV guard.
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') {
+      ;(globalThis as unknown as { __rig?: AssemblyRig }).__rig = rig
+    }
+  }, [rig])
 
   const camera = useThree((s) => s.camera)
   const size = useThree((s) => s.size)

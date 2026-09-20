@@ -1,6 +1,6 @@
 # C4 Scroll Landing Page — Implementation Plan
 
-**Goal:** A five-section, scroll-driven 3D landing page where a detonator assembles as the visitor scrolls, ending with an email captured on the device's lit display and a redirect to Stripe checkout. Executed by a coding agent with no prior context on this project.
+**Goal:** A five-section, scroll-driven 3D landing page where a detonator assembles as the visitor scrolls, ending with an email captured on the device's lit display and a Paddle checkout overlay opened with that address. Executed by a coding agent with no prior context on this project.
 
 **Deliverable:** A running Next.js app in the repo root, `pnpm dev` clean, `pnpm build` clean. Phase 1 ships with a procedural placeholder model; the real asset swaps in at Phase 3 by changing one rig implementation.
 
@@ -19,7 +19,7 @@
 - Scrolling the page drives the assembly forward and backward with no visible jump, stutter, or snap-back at any point in 0→1→0.
 - The five sections' copy and their scroll ranges come from one file (`src/content/sections.ts`), not from values scattered in components.
 - At scroll progress ≥ 0.85 the display is lit, focusable, and accepts typed text — verified on a real physical phone, not a desktop devtools emulation.
-- A valid email submits, and the browser lands on the Stripe-hosted checkout with the address prefilled.
+- A valid email submits, and the Paddle checkout overlay opens with the address prefilled.
 - An invalid email shows an inline error on the display and does not navigate.
 - `prefers-reduced-motion: reduce` renders the fully assembled device with no scrub, and the email step is still reachable.
 - Lighthouse performance ≥ 70 on mobile, and no console errors or React key/hydration warnings on any section.
@@ -47,7 +47,7 @@
 | Source | Status | What it provides |
 |---|---|---|
 | Product name, one-line pitch, price | **need the user** | All section copy and the checkout label |
-| Stripe Payment Link URL | **need the user** | `NEXT_PUBLIC_STRIPE_PAYMENT_LINK` |
+| Paddle client token, environment, price ID | **need the user** | `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN`, `NEXT_PUBLIC_PADDLE_ENV`, `NEXT_PUBLIC_PADDLE_PRICE_ID` |
 | Email list destination (Resend / Mailchimp / sheet / none) | **need the user** | `/api/capture` behaviour |
 | **A shippable 3D model** | **need the user** — unresolved, see Step 0 | The only asset allowed past Phase 2 |
 | `fbx_inspect.py` | **have it** | The Step 0 vetting gate — reads FBX object names and counts with no dependencies |
@@ -57,7 +57,7 @@
 
 **Fallbacks:**
 - Product details missing at execution time → use the placeholder copy in Step 2 verbatim, marked `TODO(copy)` in a single block comment at the top of `sections.ts`. Do not invent a product name that reads as final.
-- Payment Link missing → point `NEXT_PUBLIC_STRIPE_PAYMENT_LINK` at `https://example.com/checkout` and confirm the redirect fires with the right query string. The flow is testable without a real link.
+- Paddle credentials missing → `checkoutConfigured` in `src/lib/paddle.ts` is false, the panel tells the visitor checkout is unavailable instead of appearing to hang, and capture still runs. The validation and capture halves are testable without a token; only the overlay itself needs one, and it needs a **sandbox** token — a production token against localhost is what makes Paddle fail to load.
 - List destination missing → `/api/capture` validates, logs server-side, returns `{ ok: true }`. The client contract does not change when a provider is added later.
 - **No vetted model by the time Phase 1 is done** → this does not block anything. Steps 1–8 build and pass against the procedural placeholder. Phase 2 is skipped and Phase 3 waits. Do not substitute a rejected asset to unblock progress.
 
@@ -88,7 +88,7 @@
 ### Step 1: Repo scaffold, resolved dependencies, and answers to the three blocked questions
 
 **Sources:**
-- Ask the user: product name, one-line pitch, price, Stripe Payment Link URL, email-list destination.
+- Ask the user: product name, one-line pitch, price, Paddle price ID and client token, email-list destination.
 
 **Produces:** A Next.js + TypeScript app that boots, with `three`, `@react-three/fiber`, `@react-three/drei`, `zod`, and Tailwind installed at mutually compatible versions. `.env.local.example`.
 
@@ -98,7 +98,7 @@
 - [ ] **1.2** Scaffold: `pnpm create next-app@latest . --ts --tailwind --app --eslint --no-src-dir=false`.
 - [ ] **1.3** Install the 3D stack in **one** command so the resolver sees all peers at once: `pnpm add three @react-three/fiber @react-three/drei && pnpm add -D @types/three`.
 - [ ] **1.4** Verify the peer graph before writing any 3D code. Run `pnpm why react` and `pnpm why three`. The single most common failure on this stack is a `@react-three/fiber` major that requires a different React major than Next scaffolded, with `@react-three/drei` pinned to the other one. Correct answer: exactly one resolved version of `react`, one of `three`, and `pnpm install` exits 0 with no peer warnings mentioning these three packages. If there are warnings, downgrade `@react-three/fiber` and `@react-three/drei` together to the pair that matches the installed React major — never one without the other.
-- [ ] **1.5** Write `.env.local.example` with `NEXT_PUBLIC_STRIPE_PAYMENT_LINK=` and a commented `CAPTURE_PROVIDER_KEY=`. Copy to `.env.local`.
+- [ ] **1.5** Write `.env.local.example` with the Paddle and Resend keys listed in `docs/env-vars.md`. Copy to `.env.local`.
 - [ ] **1.6** Confirm `pnpm dev` serves the default page and `pnpm build` exits 0. Both must pass before Step 2.
 
 ### Step 2: Content model — the single source of truth for copy and timing
@@ -228,10 +228,10 @@ useFrame(() => { rig.seek(scroll.offset) })
 - [ ] **6.5 — Mobile gate.** Load on a physical phone. Scroll to section 5, tap the display, and type. Correct answer: the keyboard opens, characters appear on the panel, and the page does not scroll-jump or zoom when the input takes focus.
 - [ ] **6.6 — Documented fallback for 6.5.** `ScrollControls` runs its own scroll container, and a focused input inside a custom scroll container plus a virtual keyboard is the known failure mode on this stack. If 6.5 fails, do **not** debug it for more than an hour. Switch to: display shows a tap target, tapping opens a full-viewport overlay styled identically to the panel with the input at the top of the layout, and dismissing returns to the scene at the same progress. Record which path was taken in the handoff.
 
-### Step 7: Validation, capture, and the redirect
+### Step 7: Validation, capture, and checkout
 
 **Sources:**
-- `NEXT_PUBLIC_STRIPE_PAYMENT_LINK` from Step 1.
+- `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN`, `NEXT_PUBLIC_PADDLE_ENV`, `NEXT_PUBLIC_PADDLE_PRICE_ID` from Step 1.
 
 **Produces:** `src/lib/schema.ts`, `src/app/api/capture/route.ts`, submit handler in `DisplayPanel.tsx`
 
@@ -240,8 +240,8 @@ useFrame(() => { rig.seek(scroll.offset) })
 - [ ] **7.1** `schema.ts`: `export const CaptureInput = z.object({ email: z.string().trim().toLowerCase().email() })` and its inferred type. Both the client handler and the route handler import this same schema — one definition, two call sites.
 - [ ] **7.2** Client: validate with `CaptureInput.safeParse` before any network call. On failure, render the Zod message on the panel itself and do not navigate. Error copy states what to fix, not an apology — "that address is missing an @", not "oops, something went wrong".
 - [ ] **7.3** Route handler: parse with the same schema, return 400 with the flattened error on failure. On success, hand off to the provider from Step 1 or log and return `{ ok: true }` under the fallback.
-- [ ] **7.4** On a 2xx from `/api/capture`, redirect: `window.location.assign(`${link}?prefilled_email=${encodeURIComponent(email)}`)`. Redirect only after the capture resolves — otherwise a visitor who abandons checkout is lost entirely.
-- [ ] **7.5** Check three cases by hand and record the result of each: `notanemail` → inline error, no navigation. `a@b.co` → navigates, and the target URL's `prefilled_email` param decodes back to `a@b.co`. Capture route forced to 500 → the user still reaches checkout, with the failure logged. Correct answer: all three behave as written; a broken list provider must never block a sale.
+- [ ] **7.4** On a 2xx from `/api/capture`, open the overlay: `paddle.Checkout.open({ customer: { email }, items: [{ priceId, quantity: 1 }] })`. Open only after the capture resolves — otherwise a visitor who abandons checkout is lost entirely.
+- [ ] **7.5** Check three cases by hand and record the result of each: `notanemail` → inline error, no navigation. `a@b.co` → the Paddle overlay opens with `a@b.co` prefilled in its email field. Capture route forced to 500 → the user still reaches checkout, with the failure logged. Correct answer: all three behave as written; a broken list provider must never block a sale.
 
 ### Step 8: Quality floor
 
