@@ -329,7 +329,7 @@ export function Experience() {
   }
 
   return (
-    <main className="h-screen w-screen">
+    <main className="h-svh w-screen">
       {/* Step 8.3: cap retina cost, tighter on phones — the in-app webviews
           are the weakest browsers the site meets (spec §3). */}
       <Canvas

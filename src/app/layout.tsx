@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 
@@ -21,6 +21,15 @@ export const metadata: Metadata = {
   title: 'Five stages to armed',
   description:
     'A machined field device, assembled as you scroll. Five stages, then it is yours.',
+}
+
+// themeColor tints mobile browser chrome and in-app toolbars to the page
+// ground. viewportFit=cover lets the safe-area insets in Overlay and Credits
+// take effect. No interactive-widget: it does not reach Android in-app
+// webviews (D2); the keyboard is handled in code (scroll-freeze).
+export const viewport: Viewport = {
+  themeColor: '#F5F5F2',
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {

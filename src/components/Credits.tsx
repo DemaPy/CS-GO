@@ -11,19 +11,20 @@ import { CREDITS } from '@/content/credits'
  * It sits outside the `<Canvas>` in every branch of `Experience`, so it is
  * unaffected by the scrub and survives the reduced-motion path.
  *
- * The scrim is doing real work: at full camera push the frame fills with the
- * device's pale tan and white ribbon, and unbacked text at this size and weight
- * would be unreadable exactly where the visitor has stopped to type.
+ * The strip sits in the bottom safe area on a light ground.
  */
 export function Credits() {
   return (
     <aside
       aria-label="Attribution"
-      className="fixed bottom-0 left-0 z-10 max-w-[92vw] px-3 py-2 text-[11px] leading-relaxed"
+      // Full-width strip in the bottom safe area. The copy band's bottom
+      // padding (Overlay, 5rem) reserves this strip's height, so they never
+      // overlap. Wraps on phones: two nowrap credits overflowed 360px.
+      className="fixed inset-x-0 bottom-0 z-10 bg-ground/85 px-6 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] backdrop-blur-[2px] sm:px-10 lg:px-16"
     >
-      <p className="rounded-sm bg-ground/80 px-2 py-1 text-muted backdrop-blur-[2px]">
+      <p className="font-mono text-[10px] leading-relaxed text-muted">
         {CREDITS.map((credit, i) => (
-          <span key={credit.title} className="whitespace-nowrap">
+          <span key={credit.title} className="sm:whitespace-nowrap">
             {i > 0 && <span aria-hidden="true" className="mx-2 text-rule">·</span>}
             {credit.href ? (
               <a
@@ -46,6 +47,7 @@ export function Credits() {
             >
               {credit.licence}
             </a>
+            {credit.modified && <span>, {credit.modified}</span>}
           </span>
         ))}
       </p>

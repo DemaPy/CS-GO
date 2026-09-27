@@ -19,6 +19,11 @@ export interface Credit {
   href: string | null
   licence: string
   licenceHref: string
+  /**
+   * CC BY 4.0 §3(a)(1)(B): say if the work was modified. The GLB is the
+   * download regrouped into five animation sets by tools/build_device_glb.py.
+   */
+  modified?: string
 }
 
 export const CREDITS: Credit[] = [
@@ -30,6 +35,7 @@ export const CREDITS: Credit[] = [
     href: null,
     licence: 'CC BY 4.0',
     licenceHref: 'https://creativecommons.org/licenses/by/4.0/',
+    modified: 'regrouped for animation',
   },
   {
     title: 'DSEG14 Classic',

@@ -23,12 +23,13 @@ export function Overlay() {
           <section
             key={section.id}
             aria-labelledby={`heading-${section.id}`}
-            className={`flex h-screen w-screen px-6 sm:px-10 lg:px-16 ${
-              // Section 5 sits above the panel rather than beside it. At full
-              // camera push the panel fills the middle of the frame, so copy
-              // pinned to the vertical centre gets covered.
-              isLast ? 'items-start pt-[7vh]' : 'items-center'
-            }`}
+            className={`flex h-svh w-screen px-6 sm:px-10 lg:px-16 ${
+              // Mobile: copy in the bottom band, above the credits and the
+              // home indicator; the device owns the top ~58% (framing.ts).
+              // Desktop: centred beside the device; section 5 sits above the
+              // panel because at full push the panel fills the middle.
+              'items-end pb-[calc(env(safe-area-inset-bottom)+5rem)] md:pb-0'
+            } ${isLast ? 'md:items-start md:pt-[7svh]' : 'md:items-center'}`}
           >
             {/* Section 5's copy is pinned by Experience once the panel lights.
                 Without it, this block slides up through the lit panel across
@@ -36,7 +37,14 @@ export function Overlay() {
             <div
               {...(isLast ? { 'data-stage5-copy': '' } : {})}
               {...(isPenultimate ? { 'data-stage4-copy': '' } : {})}
-              className="max-w-[34ch] will-change-transform"
+              className={`relative max-w-[34ch] will-change-transform ${
+                // Mobile backdrop: full-bleed (cancels the 24/40px gutter),
+                // from 3rem above the label down to the bottom edge, with a
+                // hairline on top. `will-change-transform` makes this block a
+                // stacking context, so the -z-10 pseudo stays behind the
+                // text and in front of the canvas.
+                "before:pointer-events-none before:absolute before:-top-12 before:-left-6 before:-z-10 before:w-screen before:bottom-[calc(-1*(env(safe-area-inset-bottom)+5rem))] before:border-t before:border-rule before:bg-linear-to-t before:from-ground/92 before:via-ground/80 before:to-transparent before:content-[''] sm:before:-left-10 md:before:hidden"
+              }`}
             >
               {/* The mono label is visual; screen readers get the eyebrow
                   ("Stage one"), which reads better than "zero one slash". */}
