@@ -35,6 +35,10 @@ describe('confirmation email', () => {
     expect(html).not.toMatch(/<style\b/i)
   })
 
+  it('has no translucent colours: Outlook drops rgba() entirely', () => {
+    expect(html).not.toContain('rgba(')
+  })
+
   it('the plain-text part carries the link', () => {
     expect(text).toContain(URL_)
   })

@@ -115,7 +115,10 @@ export function ConfirmAddressEmail({
                   fontSize: '10px',
                   letterSpacing: '0.22em',
                   textTransform: 'uppercase',
-                  color: 'rgba(78, 226, 123, 0.55)',
+                  // Solid hex, not rgba: this hits AA (≈6.0:1) on the LCD's
+                  // #0B0F08, where the old translucent green only cleared
+                  // ≈4.1:1 — and Outlook's Word engine drops rgba() entirely.
+                  color: '#3AA35C',
                 }}
               >
                 status
