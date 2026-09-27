@@ -32,12 +32,16 @@ type Status = 'idle' | 'sending' | 'opening' | 'error' | 'captured'
 export function DisplayPanel({
   progress,
   occludeAgainst,
+  onFocusChange,
 }: {
   /** Live scroll progress. A ref, not a prop value — this updates every frame
    *  and re-rendering React at 60fps to move an opacity would be absurd. */
   progress: RefObject<number>
   /** The panel mesh, so the readout hides when the panel is behind geometry. */
   occludeAgainst?: RefObject<Object3D | null>
+  /** Focus on the address input, so the scene can hold scroll progress
+   *  while a keyboard resizes the viewport. See lib/scroll-freeze. */
+  onFocusChange?: (focused: boolean) => void
 }) {
   const shellRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -158,6 +162,7 @@ export function DisplayPanel({
     >
       <div
         ref={shellRef}
+        data-display-panel=""
         aria-hidden={!live}
         style={{ opacity: 0, pointerEvents: 'none' }}
         className="w-[240px] rounded-[4px] border border-black/60 bg-[#0b0f08] px-[16px] py-[14px] shadow-[inset_0_2px_9px_rgba(0,0,0,0.9)]"
@@ -185,6 +190,8 @@ export function DisplayPanel({
               value={value}
               aria-invalid={status === 'error'}
               aria-describedby={error ? 'arm-email-message' : undefined}
+              onFocus={() => onFocusChange?.(true)}
+              onBlur={() => onFocusChange?.(false)}
               onChange={(e) => {
                 setValue(e.target.value)
                 if (status === 'error') {

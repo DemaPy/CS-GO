@@ -2,7 +2,7 @@
 
 import { Scroll, ScrollControls, useGLTF, useScroll } from '@react-three/drei'
 import { Canvas, createPortal, useFrame, useThree } from '@react-three/fiber'
-import { Suspense, useEffect, useMemo, useRef } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef } from 'react'
 import { Object3D, Vector3 } from 'three'
 
 import { Credits } from '@/components/Credits'
@@ -14,6 +14,7 @@ import {
   DEVICE_MODEL_REASON,
   DEVICE_MODEL_URL,
 } from '@/lib/device-model'
+import { FREE, progressFor, reduceFreeze, scrollTopFor, type Freeze } from '@/lib/scroll-freeze'
 import { useMediaQuery, useReducedMotion } from '@/lib/use-reduced-motion'
 import { createGltfRig } from '@/three/assembly/gltf-rig'
 import { createPlaceholderRig } from '@/three/assembly/placeholder-rig'
@@ -126,6 +127,63 @@ function DeviceScene({
   // changes at 60fps and only the lit/unlit transition needs React.
   const progressRef = useRef(scrub ? 0 : 1)
 
+  // Dev-only handle onto the live progress value, so it can be read from
+  // DevTools without a reconstruction. In its own effect, declared after
+  // progressRef, so the closure captures an already-initialized ref (folding
+  // this into the __rig effect above — which runs first — reads progressRef
+  // before its declaration and the compiler cannot follow that safely).
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') {
+      ;(globalThis as unknown as { __progress?: () => number }).__progress = () =>
+        progressRef.current
+    }
+  }, [])
+
+  // See lib/scroll-freeze: holds progress while the address input is focused,
+  // so a keyboard-driven resize cannot drop the display below DISPLAY_LIVE_AT.
+  const freeze = useRef<Freeze>(FREE)
+
+  const onFocusChange = useCallback(
+    (focused: boolean) => {
+      if (!scrub) return
+      if (focused) {
+        freeze.current = reduceFreeze(freeze.current, { type: 'focus', progress: progressRef.current })
+        return
+      }
+      const before = freeze.current
+      freeze.current = reduceFreeze(before, { type: 'blur' })
+      if (before.kind === 'held') {
+        const el = scroll.el
+        // scrollTo rather than assigning el.scrollTop directly: the latter is
+        // a write through useScroll's returned object, which the compiler
+        // treats as frozen. Same effect — drei's scroller has no smooth
+        // scroll-behavior, so this still lands synchronously.
+        el.scrollTo(0, scrollTopFor(before.at, el.scrollHeight, el.clientHeight))
+      }
+    },
+    [scroll, scrub],
+  )
+
+  // A touch or wheel outside the panel while held is the visitor navigating
+  // away: free, blur, and do NOT restore (Review Focus 1). Touches inside the
+  // panel are caret moves and selection, and are ignored.
+  useEffect(() => {
+    if (!scrub) return
+    const el = scroll.el
+    const onUser = (event: Event) => {
+      if (freeze.current.kind !== 'held') return
+      if ((event.target as Element | null)?.closest?.('[data-display-panel]')) return
+      freeze.current = reduceFreeze(freeze.current, { type: 'userScroll' })
+      ;(document.activeElement as HTMLElement | null)?.blur()
+    }
+    el.addEventListener('touchmove', onUser, { passive: true })
+    el.addEventListener('wheel', onUser, { passive: true })
+    return () => {
+      el.removeEventListener('touchmove', onUser)
+      el.removeEventListener('wheel', onUser)
+    }
+  }, [scroll, scrub])
+
   // displayAnchor's parent IS the panel mesh, so the occlusion target comes
   // free without widening the AssemblyRig interface.
   const panelRef = useRef<Object3D | null>(rig.displayAnchor.parent)
@@ -229,7 +287,21 @@ function DeviceScene({
   }, [scrub, desktop, size.width, size.height])
 
   useFrame(() => {
-    if (scrub) frame(scroll.offset)
+    if (!scrub) return
+    // Guard against a missed blur. On submit the input turns `disabled` while
+    // focused, and engines differ on whether that fires `blur`. If focus has
+    // left the panel by any route, treat it as a blur. Otherwise the freeze
+    // would stay held after the one action that counts, and keyboard scrolling
+    // (no touch or wheel event) would never release it.
+    if (
+      freeze.current.kind === 'held' &&
+      !document.activeElement?.closest?.('[data-display-panel]')
+    ) {
+      onFocusChange(false)
+    }
+    const next = progressFor(freeze.current, scroll.offset)
+    freeze.current = next.state
+    frame(next.progress)
   })
 
   return (
@@ -239,7 +311,7 @@ function DeviceScene({
           reparenting the anchor out of the rig — mounting it as a <primitive>
           child would tear it off the panel it is measured against. */}
       {createPortal(
-        <DisplayPanel progress={progressRef} occludeAgainst={panelRef} />,
+        <DisplayPanel progress={progressRef} occludeAgainst={panelRef} onFocusChange={onFocusChange} />,
         rig.displayAnchor,
       )}
     </>
