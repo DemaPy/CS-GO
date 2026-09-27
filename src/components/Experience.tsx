@@ -387,7 +387,12 @@ export function Experience() {
             </Suspense>
           </Canvas>
         </div>
-        <div className="relative">
+        {/* `pointer-events-none`: Overlay has no links or controls of its own
+            (its text sits over the canvas), but each of its five full-svh
+            sections has default `pointer-events: auto` and, stacked in DOM
+            order on top of the canvas wrapper, would otherwise swallow every
+            click meant for the canvas's `Html`-portalled LCD input/button. */}
+        <div className="relative pointer-events-none">
           <Overlay />
         </div>
         <Credits />
