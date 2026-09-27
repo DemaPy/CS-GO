@@ -299,6 +299,14 @@ function DeviceScene({
     ) {
       onFocusChange(false)
     }
+    // Fast path: the steady state the scrub spends nearly all of its time in.
+    // progressFor allocates a fresh { progress, state } every call, including
+    // this one, and the scrub previously allocated nothing per frame — so the
+    // free case is handled here directly rather than through progressFor.
+    if (freeze.current.kind === 'free') {
+      frame(scroll.offset)
+      return
+    }
     const next = progressFor(freeze.current, scroll.offset)
     freeze.current = next.state
     frame(next.progress)
