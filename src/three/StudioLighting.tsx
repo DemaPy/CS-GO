@@ -1,10 +1,11 @@
 'use client'
 
-import { ContactShadows, Environment, Lightformer } from '@react-three/drei'
+import { Environment, Lightformer } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { useRef, useState, type RefObject } from 'react'
 
 import { BACK_WALL_SHADOW as S, SHADOW_ROTATION } from '@/three/shadow'
+import { WallContactShadows } from '@/three/WallContactShadows'
 
 /**
  * A light studio, rendered locally: two soft Lightformer panels (a key above
@@ -32,11 +33,12 @@ export function StudioLighting({ progress }: { progress?: RefObject<number> }) {
 /**
  * Re-renders only while the assembly is moving.
  *
- * drei's default `frames={Infinity}` re-renders the whole scene with an
- * override material every frame (C19). Its frame counter is a plain `let`
- * inside the component body, so any re-render resets it. `moving` flips to
- * false when progress stops changing, and that re-render paints exactly one
- * more frame at the resting pose. It flips back the moment progress moves.
+ * `frames={Infinity}` re-renders the whole scene with an override material
+ * every frame (C19). The frame counter restarts whenever `frames` changes, so
+ * when `moving` flips to false that re-render paints exactly one more frame at
+ * the resting pose. It flips back the moment progress moves. StudioLighting
+ * mounts with the rig, after the model has loaded, so the first frames already
+ * see the device.
  */
 function BackWallShadow({ progress }: { progress?: RefObject<number> }) {
   const last = useRef<number | null>(null)
@@ -50,7 +52,7 @@ function BackWallShadow({ progress }: { progress?: RefObject<number> }) {
   })
 
   return (
-    <ContactShadows
+    <WallContactShadows
       position={[0, 0, S.z]}
       rotation={SHADOW_ROTATION}
       scale={S.scale}
