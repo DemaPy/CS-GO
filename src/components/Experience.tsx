@@ -25,6 +25,7 @@ import {
   assembledSize,
   cameraPose,
   type CameraPose,
+  type Viewport,
 } from '@/three/framing'
 
 /**
@@ -114,6 +115,7 @@ function DeviceScene({
 
   // Scratch vectors, reused every frame so the scrub allocates nothing.
   const anchor = useRef(new Vector3())
+  const viewport = useRef<Viewport>({ width: 0, height: 0, desktop })
 
   // Measured once per rig: the assembled box, so the mobile fit uses the real
   // model's size rather than REFERENCE_BOUNDS (A41).
@@ -207,13 +209,11 @@ function DeviceScene({
     rig.root.updateMatrixWorld(true)
     rig.displayAnchor.getWorldPosition(anchor.current)
 
-    cameraPose(
-      progress,
-      { width: size.width, height: size.height, desktop },
-      anchor.current,
-      device,
-      pose.current,
-    )
+    viewport.current.width = size.width
+    viewport.current.height = size.height
+    viewport.current.desktop = desktop
+
+    cameraPose(progress, viewport.current, anchor.current, device, pose.current)
     camera.position.copy(pose.current.position)
     camera.lookAt(pose.current.target)
 
