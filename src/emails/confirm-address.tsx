@@ -11,13 +11,13 @@ import {
   Text,
 } from '@react-email/components'
 
+import { PALETTE } from '@/content/palette'
+
 /**
- * Newsletter confirmation email.
- *
- * Styled after a military demolition device — dark housing, warning-tape amber,
- * a green LED readout — matching the landing page's Visual Direction. It is an
- * aesthetic homage, deliberately carrying no third-party game trademarks,
- * logos, or in-game lines: this is commercial mail for our own product.
+ * Light studio, matching the landing page: an off-white ground, a white card,
+ * near-black type, the page's signal orange for the one action. One dark LCD
+ * strip is kept as the single echo of the device. Deliberately carries no
+ * third-party game trademarks, logos, or in-game lines.
  *
  * ## Email is not the browser
  *
@@ -30,15 +30,14 @@ import {
  */
 
 const COLORS = {
-  ground: '#12140f',
-  housing: '#1f2319',
-  panel: '#0b0f08',
-  paper: '#d8d4c6',
-  muted: 'rgba(216, 212, 198, 0.62)',
-  faint: 'rgba(216, 212, 198, 0.42)',
-  brass: '#8a6e3b',
-  amber: '#c8862a',
-  armed: '#4ee27b',
+  ground: PALETTE.ground,
+  card: '#FFFFFF',
+  rule: PALETTE.rule,
+  ink: PALETTE.ink,
+  muted: PALETTE.muted,
+  signalInk: PALETTE.signalInk,
+  lcd: PALETTE.lcd,
+  armed: PALETTE.armed,
 }
 
 const MONO =
@@ -77,24 +76,13 @@ export function ConfirmAddressEmail({
             padding: '0 16px',
           }}
         >
-          {/* Warning tape. A striped repeating-linear-gradient degrades to the
-              solid amber background colour where gradients are unsupported. */}
+          {/* The card */}
           <Section
             style={{
-              height: '10px',
-              backgroundColor: COLORS.amber,
-              backgroundImage: `repeating-linear-gradient(135deg, ${COLORS.amber} 0, ${COLORS.amber} 10px, ${COLORS.ground} 10px, ${COLORS.ground} 20px)`,
-              borderRadius: '2px 2px 0 0',
-            }}
-          />
-
-          {/* Device housing */}
-          <Section
-            style={{
-              backgroundColor: COLORS.housing,
+              backgroundColor: COLORS.card,
               padding: '30px 28px 34px',
-              border: `1px solid ${COLORS.brass}`,
-              borderTop: 'none',
+              border: `1px solid ${COLORS.rule}`,
+              borderRadius: '6px',
             }}
           >
             <Text
@@ -102,9 +90,9 @@ export function ConfirmAddressEmail({
                 margin: '0 0 22px',
                 fontFamily: MONO,
                 fontSize: '11px',
-                letterSpacing: '0.18em',
+                letterSpacing: '0.08em',
                 textTransform: 'uppercase',
-                color: COLORS.amber,
+                color: COLORS.signalInk,
               }}
             >
               Stage five &middot; awaiting confirmation
@@ -113,9 +101,9 @@ export function ConfirmAddressEmail({
             {/* The LED panel */}
             <Section
               style={{
-                backgroundColor: COLORS.panel,
-                border: '1px solid #000000',
-                borderRadius: '3px',
+                backgroundColor: COLORS.lcd,
+                border: 'none',
+                borderRadius: '4px',
                 padding: '18px 18px 20px',
                 marginBottom: '28px',
               }}
@@ -153,8 +141,9 @@ export function ConfirmAddressEmail({
                 fontFamily: SANS,
                 fontSize: '27px',
                 lineHeight: 1.15,
-                fontWeight: 700,
-                color: COLORS.paper,
+                fontWeight: 600,
+                letterSpacing: '-0.02em',
+                color: COLORS.ink,
               }}
             >
               One click and you are on the list
@@ -175,22 +164,23 @@ export function ConfirmAddressEmail({
 
             {/* A styled <a>, not <Button>: Outlook ignores padding on anchors,
                 so the visual weight comes from a bordered block that survives
-                being reduced to plain text. */}
+                being reduced to plain text. Signal-ink, not black: partial-invert
+                dark modes darken the card and would swallow a black button (D6). */}
             <Section style={{ marginBottom: '26px' }}>
               <Link
                 href={confirmUrl}
                 style={{
                   display: 'inline-block',
                   padding: '14px 26px',
-                  backgroundColor: COLORS.armed,
-                  color: COLORS.panel,
-                  fontFamily: MONO,
+                  backgroundColor: COLORS.signalInk,
+                  color: '#FFFFFF',
+                  fontFamily: SANS,
                   fontSize: '14px',
-                  fontWeight: 700,
-                  letterSpacing: '0.14em',
-                  textTransform: 'uppercase',
+                  fontWeight: 600,
+                  letterSpacing: '0.02em',
+                  textTransform: 'none',
                   textDecoration: 'none',
-                  borderRadius: '3px',
+                  borderRadius: '6px',
                 }}
               >
                 Arm subscription
@@ -203,7 +193,7 @@ export function ConfirmAddressEmail({
                 fontFamily: SANS,
                 fontSize: '13px',
                 lineHeight: 1.5,
-                color: COLORS.faint,
+                color: COLORS.muted,
               }}
             >
               Button not working? Paste this into your browser:
@@ -215,7 +205,7 @@ export function ConfirmAddressEmail({
                 fontSize: '12px',
                 lineHeight: 1.5,
                 wordBreak: 'break-all',
-                color: COLORS.faint,
+                color: COLORS.muted,
               }}
             >
               {confirmUrl}
@@ -225,7 +215,7 @@ export function ConfirmAddressEmail({
           <Hr
             style={{
               border: 'none',
-              borderTop: `1px solid ${COLORS.brass}`,
+              borderTop: `1px solid ${COLORS.rule}`,
               margin: '0 0 16px',
             }}
           />
@@ -235,9 +225,9 @@ export function ConfirmAddressEmail({
               margin: '0 0 8px',
               fontFamily: MONO,
               fontSize: '11px',
-              letterSpacing: '0.12em',
+              letterSpacing: '0.08em',
               textTransform: 'uppercase',
-              color: COLORS.amber,
+              color: COLORS.signalInk,
             }}
           >
             This link expires in {expiresInDays} days
@@ -249,7 +239,7 @@ export function ConfirmAddressEmail({
               fontFamily: SANS,
               fontSize: '13px',
               lineHeight: 1.55,
-              color: COLORS.faint,
+              color: COLORS.muted,
             }}
           >
             Did not ask for this? Ignore it. Your address has not been added to
