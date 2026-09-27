@@ -41,23 +41,23 @@ export function Overlay() {
             >
               {/* Sentence case, not tracked-out caps. The stage number encodes a
                   real assembly sequence, so it is information, not decoration. */}
-              <p className="mb-4 text-sm text-amber">
+              <p className="mb-4 text-sm text-signal-ink">
                 <span
                   aria-hidden="true"
-                  className="mr-3 inline-block w-6 border-t border-brass align-middle"
+                  className="mr-3 inline-block w-6 border-t border-signal align-middle"
                 />
                 {section.eyebrow}
               </p>
 
               <h2
                 id={`heading-${section.id}`}
-                className="h-display text-[clamp(2rem,5.2vw,3.75rem)] text-paper"
+                className="h-display text-[clamp(2rem,5.2vw,3.75rem)] text-ink"
               >
                 {section.heading}
               </h2>
 
               {!isLast && (
-                <p className="mt-5 text-lg leading-relaxed text-paper/70">
+                <p className="mt-5 text-lg leading-relaxed text-muted">
                   {section.body}
                 </p>
               )}

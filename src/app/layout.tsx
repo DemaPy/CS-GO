@@ -1,14 +1,18 @@
 import type { Metadata } from 'next'
-import { Archivo } from 'next/font/google'
+import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 
-// One family, two widths. The `wdth` axis is what lets headings run at
-// expanded 125% while body text stays normal — a deliberate pairing rather
-// than the default serif-plus-sans.
-const archivo = Archivo({
-  variable: '--font-archivo',
+// Geist for everything, Geist Mono for the stage label and credits. Normal
+// width only: the old 125% `wdth` stretch is what read as military.
+const geist = Geist({
+  variable: '--font-geist',
   subsets: ['latin'],
-  axes: ['wdth'],
+  display: 'swap',
+})
+
+const geistMono = Geist_Mono({
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
   display: 'swap',
 })
 
@@ -21,7 +25,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="en" className={`${archivo.variable} h-full antialiased`}>
+    <html lang="en" className={`${geist.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full">{children}</body>
     </html>
   )

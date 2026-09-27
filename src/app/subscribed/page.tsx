@@ -43,24 +43,24 @@ export default async function Subscribed({
   return (
     <main className="flex min-h-screen items-center px-6 sm:px-10 lg:px-16">
       <div className="max-w-[40ch]">
-        <p className="mb-4 text-sm text-amber">
+        <p className="mb-4 text-sm text-signal-ink">
           <span
             aria-hidden="true"
-            className="mr-3 inline-block w-6 border-t border-brass align-middle"
+            className="mr-3 inline-block w-6 border-t border-signal align-middle"
           />
           {eyebrow}
         </p>
 
-        <h1 className="h-display text-[clamp(2rem,5.2vw,3.5rem)] text-paper">
+        <h1 className="h-display text-[clamp(2rem,5.2vw,3.5rem)] text-ink">
           {heading}
         </h1>
 
-        <p className="mt-5 text-lg leading-relaxed text-paper/70">{body}</p>
+        <p className="mt-5 text-lg leading-relaxed text-muted">{body}</p>
 
         <p className="mt-10">
           <Link
             href="/"
-            className="border-b border-brass pb-1 text-base text-paper/80"
+            className="border-b border-signal pb-1 text-base text-ink"
           >
             Back to the device
           </Link>

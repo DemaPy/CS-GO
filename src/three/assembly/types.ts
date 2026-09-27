@@ -76,21 +76,18 @@ export function smoothstep(t: number): number {
 /**
  * The device's colours, keyed by the section that seats each group.
  *
- * Both rigs paint from this: the placeholder builds its boxes with it, and the
- * glTF rig tints any group whose exported material carries no texture. One
- * table, so "what colour is the casing" cannot have two answers depending on
- * which rig is mounted.
- *
- * Straight from the Visual Direction palette in `globals.css`. The panel is
- * darkest so the display green has somewhere to land — the green itself is
- * absent here, because scarcity is the whole point of it.
+ * The placeholder rig builds its boxes from this table. The glTF rig only
+ * tints materials that carry NO texture (`paint()` in gltf-rig.ts). On the
+ * shipped model that is just the LCD-plane material, so on the real device
+ * only `panel` shows (A42). Light studio set: graphite and aluminium, with the
+ * harness in the page's signal orange.
  */
 export const PART_COLOR: Record<SectionId, number> = {
-  casing: 0x2f3428, // olive drab, shaded down — it sits behind everything
-  charges: 0x3f4536, // --canvas
-  harness: 0x8a6e3b, // --brass
-  panel: 0x14180f, // near-black, waiting for the readout
-  arm: 0x8a6e3b, // --brass, same metal as the harness
+  casing: 0x3a3d40, // graphite
+  charges: 0xb8bcc0, // aluminium grey
+  harness: 0xff4f00, // signal, the one saturated part
+  panel: 0x14161a, // near-black, waiting for the readout
+  arm: 0x3a3d40, // graphite, same metal as the casing
 }
 
 /** The groups that read as metal rather than painted body. */

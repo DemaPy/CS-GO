@@ -21,16 +21,16 @@ export function Credits() {
       aria-label="Attribution"
       className="fixed bottom-0 left-0 z-10 max-w-[92vw] px-3 py-2 text-[11px] leading-relaxed"
     >
-      <p className="rounded-sm bg-surface/70 px-2 py-1 text-paper/45 backdrop-blur-[2px]">
+      <p className="rounded-sm bg-ground/80 px-2 py-1 text-muted backdrop-blur-[2px]">
         {CREDITS.map((credit, i) => (
           <span key={credit.title} className="whitespace-nowrap">
-            {i > 0 && <span aria-hidden="true" className="mx-2 text-brass">·</span>}
+            {i > 0 && <span aria-hidden="true" className="mx-2 text-rule">·</span>}
             {credit.href ? (
               <a
                 href={credit.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="underline decoration-brass/60 underline-offset-2 hover:text-paper/80"
+                className="underline decoration-rule underline-offset-2 hover:text-ink"
               >
                 {credit.title}
               </a>
@@ -42,7 +42,7 @@ export function Credits() {
               href={credit.licenceHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="underline decoration-brass/60 underline-offset-2 hover:text-paper/80"
+              className="underline decoration-rule underline-offset-2 hover:text-ink"
             >
               {credit.licence}
             </a>

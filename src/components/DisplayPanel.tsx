@@ -214,9 +214,9 @@ export function DisplayPanel({
           {error && (
             <p
               id="arm-email-message"
-              // Amber, not red: red appears nowhere in this palette, and the
-              // message is a correction, not an alarm.
-              className="readout mt-[9px] text-[9px] leading-[1.4] text-amber"
+              // Signal orange, not red: the message is a correction, not an
+              // alarm. `readout-alert`, not a utility class; see globals.css.
+              className="readout readout-alert mt-[9px] text-[9px] leading-[1.4]"
               role="status"
             >
               {error}
