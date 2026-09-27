@@ -1,7 +1,7 @@
 # Light studio redesign — design
 
 **Date:** 2026-09-27
-**Status:** approved in conversation, awaiting written-spec review
+**Status:** approved in conversation, revised after review, awaiting written-spec review
 **Sub-project:** 1 of 3 (redesign → domain + Resend → analytics/UTM + go-live)
 
 ## Why
@@ -57,8 +57,9 @@ This is a hard rule, not a preference.
 
 The Tailwind `@theme inline` block is renamed to match (`surface/canvas/brass/
 amber/paper` → `ground/ink/muted/rule/signal/signal-ink/armed`), and every
-usage is migrated. The old names are removed rather than aliased, so a missed
-usage fails the build instead of rendering olive.
+usage is migrated. The old names are removed rather than aliased. Tailwind v4
+does **not** fail the build on an unknown class (it silently emits nothing), so
+completeness is checked by a grep in §5, not by the compiler.
 
 The "device is dark in every context, no light mode" comment in `globals.css`
 is replaced: the page is now light-only. There is still no dark-mode variant,
@@ -96,19 +97,32 @@ column.
 
 - **The device renders at full strength in the top ~58% of the viewport.** The
   canvas stays full-screen (drei's `<Scroll html>` overlay must share its
-  container). The frame is shifted with `camera.setViewOffset` so that the
-  device's centre lands at ~29% of viewport height. The camera target on mobile
-  stays at the device centre (as today). `.dim-device` and its 35% opacity are
-  deleted.
+  container). The frame is shifted by **translating the camera and its look
+  target down by the same world amount**, so that the device's centre lands at
+  ~29% of viewport height: `Δy = 0.42 · dist · tan(fov/2)`, recomputed per
+  frame from the current camera distance. The view stays square to the axis,
+  so there is no perspective skew.
+
+  **Not `camera.setViewOffset`.** Verified in the installed
+  `@react-three/drei/web/Html.js`: for a perspective camera, `Html` builds its
+  CSS projection from `projectionMatrix.elements[5]` (the fov term) alone and
+  ignores the off-axis terms `setViewOffset` writes. The LCD would move up
+  ~21% of the screen while the typed-input overlay stayed put, which breaks
+  the signup step.
+
+  `.dim-device` and its 35% opacity are deleted.
 - **Copy sits in a bottom band.** Each `<section>` aligns its copy block to the
   bottom (`items-end`), with bottom padding = credits height +
   `env(safe-area-inset-bottom)` + 24px. Behind the band: a 1px `--rule` top
   hairline and a `--ground` gradient from transparent to ~92% opacity, so a
   part passing behind the text mid-flight never costs legibility.
 - **Stage 5 on mobile:** the camera push places the LCD in the top band (the
-  view offset still applies during the push), and "Arm it" plus the body line
+  camera translation still applies during the push), and "Arm it" plus the body line
   sit in the bottom band, not pinned to the top. `pinStageFive` keeps working
-  for desktop; on mobile the block pins to the bottom band instead. When the
+  for desktop; on mobile the block pins to the bottom band instead.
+  **The stage 5 body line is restored in Phase A** on both breakpoints.
+  `Overlay` currently skips the body when `isLast`, so the visitor is never
+  told what the input is for. That block is being rewritten here anyway. When the
   on-screen keyboard opens it covers the copy band, and the LCD input stays
   visible.
 - **Tap targets:** the ARM button on the LCD gets a hit area of at least
@@ -121,8 +135,12 @@ column.
 - `100vh`/`h-screen` → `100svh` for the sections and the `<main>` scroll host.
   In-app toolbars collapse on scroll; `vh` resizes the canvas mid-scrub, which
   shows up as a stutter.
-- `viewport: { viewportFit: 'cover' }` in the root layout, and safe-area insets
-  on the credits line and copy band.
+- `viewport: { viewportFit: 'cover', interactiveWidget: 'resizes-visual' }` in
+  the root layout, and safe-area insets on the credits line and copy band.
+  `resizes-visual` stops the on-screen keyboard from resizing the layout
+  viewport (possible in Android webviews). Otherwise R3F resizes the canvas,
+  ScrollControls recomputes page height, progress can drop below
+  `DISPLAY_LIVE_AT`, and the display goes dark mid-typing.
 - Credits live in the bottom safe-area strip at 10px mono. The copy band's
   padding reserves their height, so the two never overlap.
 
@@ -140,9 +158,22 @@ scrolling as a normal document underneath.
     download** from a CDN;
   - one directional key light kept for form definition.
   Intensities are tuned by eye against screenshots, on the real model.
-- **Grounding shadow.** drei `<ContactShadows>` on a plane behind the device,
-  facing the camera: opacity ~0.3, blur ~2.5, resolution 256. The shadow falls
-  down-right, consistent with the key.
+- **Grounding shadow.** drei `<ContactShadows>` as a back wall, not a floor.
+  It projects orthographically along its plane's normal, so a camera-facing
+  plane gives a soft silhouette **halo directly behind** the device (an
+  ambient-occlusion look), not a directional drop shadow. That is the intended
+  look. drei's defaults assume metres, and this scene is in millimetres
+  (`types.ts` `REFERENCE_BOUNDS`), so the parameters are set explicitly:
+  - `rotation={[Math.PI / 2, 0, 0]}` (its local +y, the projection axis, points
+    at the camera);
+  - `position={[0, 0, -220]}`: behind the device's back face (~−41) and behind
+    the furthest scatter origin (charges at −140 relative to their seat,
+    ≈ −180 world), so a part in flight never passes behind the plane;
+  - `far={260}` (reaches from the plane to the device's front face);
+  - `scale={520}` (covers the ~250 mm device plus the in-frame scatter paths);
+  - `opacity={0.3}`, `blur={2.5}`, `resolution={256}`.
+  If the halo reads too centred, a small tilt of a few degrees throws it
+  down-right. That is tuned against a screenshot, not guessed.
 - **Placeholder colours (`PART_COLOR` in `types.ts`).** Graphite casing,
   aluminium-grey charges, `--signal` harness, near-black panel, graphite arm.
   The comment explaining the palette is updated.
@@ -187,8 +218,19 @@ direction.
   landing heading in Geist 600, `01 / 05` in `--signal-ink`, and on the right a
   static PNG of the assembled device. The PNG is captured once from the real
   scene on the light ground and committed at `public/og/device.png`
-  (≈150 KB). Geist font data is read from the file system for the image
-  renderer.
+  (≈150 KB).
+
+  Fonts for the image renderer: `next/og` (Satori) accepts TTF/OTF/WOFF, **not
+  WOFF2**, and `next/font/google` exposes no file path. So `Geist-SemiBold.ttf`
+  and `GeistMono-Regular.ttf` are committed under `src/app/og-fonts/` (SIL OFL
+  1.1, from the official Vercel `geist-font` release, with its `OFL.txt` beside
+  them) and read with `readFile` in `opengraph-image.tsx`.
+
+  **Open risk, decision for the user:** a detonator render in a link-preview
+  card may trip automated link-safety review on Meta/TikTok/X, and a
+  suppressed preview directly hurts the demand test. The card is built so its
+  image is one swappable file. A typographic-only card (no device) is the
+  fallback if previews get flagged.
 
   The OG PNG derives from the CC-BY model, so the attribution requirement also
   applies to it. The card carries a small credit line in the corner, per
@@ -202,7 +244,9 @@ Before writing this code, read the metadata docs in
 
 Done means all of the following, with evidence:
 
-1. `pnpm lint`, `pnpm exec tsc --noEmit` and `pnpm build` pass.
+1. `pnpm lint`, `pnpm exec tsc --noEmit` and `pnpm build` pass, **and** this
+   returns nothing (no leftover class from the old palette):
+   `grep -rnE '(text|bg|border|decoration|outline|from|to|via)-(surface|canvas|brass|amber|paper)' src`
 2. Chrome DevTools screenshots at 390×844, 360×780, 768×1024 and 1440×900,
    each at scroll progress 0, 0.3, 0.5, 0.7, 0.9 and 1.0, plus reduced motion
    at 390 and 1440. I review them myself and show the user the key frames.
@@ -216,7 +260,8 @@ Done means all of the following, with evidence:
    happens after deploy (sub-project 3).
 7. **Deferred to sub-project 3:** the user's own phone plus the Instagram
    in-app browser against the deployed URL, including typing into the LCD with
-   the keyboard open.
+   the keyboard open. **Canvas size and scroll progress must not change while
+   the keyboard is open.**
 
 ## Phase B — 3D fixes (after Phase A is signed off)
 
@@ -233,9 +278,7 @@ From the 2026-09-27 screenshot review:
 3. **The LCD overlay is offset** from the model's LCD (screenshot 5).
    `PANEL_WIDTH`/`PANEL_HEIGHT` were measured on the placeholder rig. Re-measure
    against the glTF LCD, and check the `DisplayAnchor` position.
-4. **Stage 5's instruction line is missing.** `Overlay` hides the body when
-   `isLast`, so the visitor is never told what the input is for.
-5. **"Four charges"** vs three bricks. This is a copy fact, not style. Flag it
+4. **"Four charges"** vs three bricks. This is a copy fact, not style. Flag it
    to the user; don't rewrite it silently.
 
 Each fix gets its own before/after screenshot at the relevant progress.
