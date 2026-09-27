@@ -2,8 +2,8 @@
 
 **Date:** 2026-09-27
 **Status:** approved in conversation, revised after statement verification
-(`2026-09-27-light-studio-redesign-verification.md`), awaiting written-spec
-review
+(`2026-09-27-light-studio-redesign-verification.md`), decisions resolved,
+awaiting written-spec review
 **Sub-project:** 1 of 3 (redesign → domain + Resend → analytics/UTM + go-live)
 
 References like **(A34)** point to rows in the verification table.
@@ -39,24 +39,17 @@ domain, deploy.
 | Extra surfaces | `/subscribed`, confirmation email, title/meta/OG |
 | 3D fixes | Yes, after the redesign (Phase B) |
 
-### Open decisions for the user
+### Resolved after verification (2026-09-27)
 
-1. **Email button colour.** It was approved as `#111` in chat. Verification
-   found no evidence that dark survives dark-mode inversion better (D6). In
-   partial-invert clients (Outlook apps), the white card goes dark while a
-   `#111` button stays put and loses its edge. The spec now defaults to a
-   `#C73E00` button with white text (5.1:1), which partial inversion leaves
-   visible. Confirm, or keep `#111`.
-2. **Licence chain of the device model.** The model is "C4 bomb | CS2" (D5), a
-   fan model of a Valve Counter-Strike 2 asset. The uploader's CC BY grant
-   cannot license Valve's underlying design. This affects the whole page, not
-   just the OG card. The redesign itself is unaffected (the model is behind an
-   env switch), but it has to be settled before paid or organic promotion.
-3. **OG card image.** Keep the device render, or go typographic-only? The
-   evidence (D7): Meta's weapons policy governs **ads** and allows game and
-   fiction contexts, and there's no evidence of organic preview suppression.
-   Organic IG/TikTok posts don't show OG cards at all; X, Facebook and
-   messaging apps do.
+1. **Email button:** `#C73E00` with white text (5.1:1). This replaces the
+   `#111` approved in chat, because partial-invert clients (Outlook apps) can
+   blend a black button into the darkened card (D6).
+2. **Model licence chain** (D5, "C4 bomb | CS2" fan model of a Valve asset):
+   **left as is.** The user will handle it separately. It doesn't block this
+   sub-project.
+3. **OG card image:** the device render is kept. Facebook is not a channel,
+   and organic IG/TikTok posts show no OG card, so the card matters only on X
+   and in messaging apps (D7).
 
 ## 1. Visual system
 
@@ -251,8 +244,7 @@ copy and the three states are unchanged (A21).
 
 The `COLORS` table (A22) becomes light: `#F5F5F2` body, a white 520px card
 (the existing container width) with a `#E2E2DD` border, an `#111111` heading
-and a `#6B6B6B` body. The button is `#C73E00` with white text; see Open
-decision 1. One small dark readout strip is kept (`ADDRESS · PENDING`, green
+and a `#6B6B6B` body. The button is `#C73E00` with white text (Resolved 1). One small dark readout strip is kept (`ADDRESS · PENDING`, green
 monospace on `#0b0f08`) as the single echo of the device. In full-invert
 clients (Gmail iOS, Outlook Windows) the strip may flip to light, which is
 accepted (D6). The existing constraints hold, as verified in A23: inline styles
@@ -279,7 +271,7 @@ before writing this code (per `AGENTS.md`).
 - `src/app/opengraph-image.tsx`, using `next/og` `ImageResponse` (C7) at
   1200×630: the `--ground` background, the landing heading in Geist 600,
   `01 / 05` in `--signal-ink`, and on the right a static PNG of the assembled
-  device (see Open decision 3). The PNG is captured once from the real scene
+  device (Resolved 3). The PNG is captured once from the real scene
   on the light ground and committed at `public/og/device.png`.
 - `src/app/twitter-image.tsx` is a **named** re-export:
   `export { default, alt, size, contentType } from './opengraph-image'`.
