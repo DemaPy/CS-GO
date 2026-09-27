@@ -44,6 +44,18 @@ export function Overlay() {
                 // stacking context, so the -z-10 pseudo stays behind the
                 // text and in front of the canvas.
                 "before:pointer-events-none before:absolute before:-top-12 before:-left-6 before:-z-10 before:w-screen before:bottom-[calc(-1*(env(safe-area-inset-bottom)+5rem))] before:border-t before:border-rule before:bg-linear-to-t before:from-ground/92 before:via-ground/80 before:to-transparent before:content-[''] sm:before:-left-10 md:before:hidden"
+              } ${
+                // Desktop-only backdrop for section 5: at full push the camera
+                // fills the frame with device texture right behind this block
+                // (framing.ts), so the copy needs its own solid card there. A
+                // separate ::after (not the mobile ::before, which carries a
+                // gradient `background-image` that `bg-ground/95` would not
+                // override) sized with a negative inset so the text keeps its
+                // current position; `content-['']` is scoped to `md:` so
+                // phones never get this pseudo.
+                isLast
+                  ? "md:after:pointer-events-none md:after:absolute md:after:-inset-5 md:after:-z-10 md:after:rounded-sm md:after:bg-ground/95 md:after:content-['']"
+                  : ''
               }`}
             >
               {/* The mono label is visual; screen readers get the eyebrow

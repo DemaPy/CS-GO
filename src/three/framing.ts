@@ -26,7 +26,7 @@ export const PANEL_HEIGHT = 28.3
 
 /** Share of the frame the panel may occupy at full push, per axis. */
 export const PANEL_WIDTH_FRACTION = 0.72
-export const PANEL_HEIGHT_FRACTION = 0.42
+export const PANEL_HEIGHT_FRACTION = 0.36
 
 /** Mobile: share of the viewport the assembled device may fill, per axis. */
 export const MOBILE_DEVICE_WIDTH_FRACTION = 0.88
