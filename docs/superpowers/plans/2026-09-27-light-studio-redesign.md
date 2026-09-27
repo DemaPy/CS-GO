@@ -1145,22 +1145,31 @@ git commit -m "Framing module: device in the top band on phones, tested against 
 In `Overlay.tsx`, replace the `<section>` `className` expression with:
 
 ```tsx
-            className={`relative isolate flex h-svh w-screen px-6 sm:px-10 lg:px-16 ${
+            className={`flex h-svh w-screen px-6 sm:px-10 lg:px-16 ${
               // Mobile: copy in the bottom band, above the credits and the
               // home indicator; the device owns the top ~58% (framing.ts).
               // Desktop: centred beside the device; section 5 sits above the
               // panel because at full push the panel fills the middle.
               'items-end pb-[calc(env(safe-area-inset-bottom)+5rem)] md:pb-0'
-            } ${isLast ? 'md:items-start md:pt-[7svh]' : 'md:items-center'} ${
-              // The band's backdrop: a hairline at the band's top edge and a
-              // ground fade, so a part flying behind the copy mid-scrub never
-              // costs legibility. `isolate` keeps the -z-10 pseudo inside
-              // this section instead of dropping behind the canvas.
-              "before:pointer-events-none before:absolute before:inset-x-0 before:bottom-0 before:-z-10 before:h-[44svh] before:border-t before:border-rule before:bg-linear-to-t before:from-ground/92 before:via-ground/80 before:to-transparent before:content-[''] md:before:hidden"
-            }`}
+            } ${isLast ? 'md:items-start md:pt-[7svh]' : 'md:items-center'}`}
 ```
 
 Why `svh`: `vh` is the large viewport, so while toolbars are visible the bottom of a `100vh` box sits under them and would hide the copy band. `svh` always fits the visible area (D1).
+
+**The band's backdrop goes on the inner copy block, NOT on the `<section>`.** The sections keep scrolling with drei's overlay: section *i*'s top is at (i − 4p)·vh. A section-level backdrop would therefore sweep across the screen. At p = 0.85, section 4's backdrop would cover 16–60% of the height, which is right over the LCD at 29% while the visitor types. Section 5's own backdrop would still be below the viewport, leaving its pinned copy over bare keypad texture. The inner block is the element `fadeStageFour` fades and `pinStageFive` holds, so a backdrop attached to it fades out with stage 4 and stays put with stage 5.
+
+Replace the inner block's `className="max-w-[34ch] will-change-transform"` with:
+
+```tsx
+              className={`relative max-w-[34ch] will-change-transform ${
+                // Mobile backdrop: full-bleed (cancels the 24/40px gutter),
+                // from 3rem above the label down to the bottom edge, with a
+                // hairline on top. `will-change-transform` makes this block a
+                // stacking context, so the -z-10 pseudo stays behind the
+                // text and in front of the canvas.
+                "before:pointer-events-none before:absolute before:-top-12 before:-left-6 before:-z-10 before:w-screen before:bottom-[calc(-1*(env(safe-area-inset-bottom)+5rem))] before:border-t before:border-rule before:bg-linear-to-t before:from-ground/92 before:via-ground/80 before:to-transparent before:content-[''] sm:before:-left-10 md:before:hidden"
+              }`}
+```
 
 In `Experience.tsx` (scrub branch), change `<main className="h-screen w-screen">` to `<main className="h-svh w-screen">`.
 
@@ -1251,6 +1260,11 @@ In Chrome DevTools at 390×844 and 360×780, at scroll progress 0, 0.3, 0.5, 0.7
 - the credits never overlap the copy;
 - sections 4 and 5 never overlap each other (0.82–0.86);
 - this evaluates to `true`: `document.documentElement.scrollWidth === innerWidth`.
+
+**The live window, where the signup happens.** At 390×844 and p = 0.86, 0.90 and 0.95:
+- The LCD region must not be tinted. Evaluate `document.elementsFromPoint(innerWidth / 2, innerHeight * 0.29)`: no element between the top of the stack and the `<canvas>` may have a non-transparent computed `background-image` or `background-color`.
+- The stage-5 copy has its backdrop: the screenshot shows the fade behind "Arm it".
+- The stage-4 copy and its backdrop are fully faded (`opacity` 0).
 
 At 1440×900 the desktop layout matches the Task 2 screenshot. Record the frames.
 
@@ -1500,6 +1514,17 @@ Replace `useFrame(() => { if (scrub) frame(scroll.offset) })` with:
 ```tsx
   useFrame(() => {
     if (!scrub) return
+    // Guard against a missed blur. On submit the input turns `disabled` while
+    // focused, and engines differ on whether that fires `blur`. If focus has
+    // left the panel by any route, treat it as a blur. Otherwise the freeze
+    // would stay held after the one action that counts, and keyboard scrolling
+    // (no touch or wheel event) would never release it.
+    if (
+      freeze.current.kind === 'held' &&
+      !document.activeElement?.closest?.('[data-display-panel]')
+    ) {
+      onFocusChange(false)
+    }
     const next = progressFor(freeze.current, scroll.offset)
     freeze.current = next.state
     frame(next.progress)
@@ -1520,10 +1545,16 @@ Pass the callback: `<DisplayPanel progress={progressRef} occludeAgainst={panelRe
 Run: `pnpm lint && pnpm exec tsc --noEmit && pnpm test`
 Expected: PASS.
 
-With `pnpm dev`, in Chrome DevTools, emulate 390×844, scroll to the end, and click the LCD input. Evaluate `__progress()` and record it (expect ≈ 1). Then emulate 390×544 (−300 px) and scroll the drei container by 1 px programmatically (`el.scrollTop += 1`) so ScrollControls recomputes. Checks:
-- `__progress()` is unchanged, and the display is still lit (the shell's `opacity` is `1`).
-- Blur the input by pressing Escape or tabbing out. Within 2 s, `__progress()` is back within 0.002 of the recorded value.
-- Focus again, then dispatch a `wheel` event on the drei scroller (`el.dispatchEvent(new WheelEvent('wheel', { bubbles: true }))`). The input blurs and `__progress()` follows the live scroll.
+With `pnpm dev`, in Chrome DevTools, emulate 390×844, scroll to the end, and click the LCD input. Evaluate `__progress()` and record it (expect ≈ 1).
+
+Then run the steps in the order a real keyboard produces:
+1. **Keyboard opens.** Emulate 390×544 (−300 px), then scroll the drei container by 1 px programmatically (`el.scrollTop += 1`) so ScrollControls recomputes. Check: `__progress()` is unchanged, and the display is still lit (the shell's `opacity` is `1`).
+2. **Keyboard closes.** Restore 390×844 **first**, then blur the input (Escape or tab out). The keyboard closing and the input blurring arrive together in practice.
+3. **Convergence.** Sample `__progress()` every 100 ms for 2.5 s. It must stay within 0.002 of the recorded value throughout, with no jump. It either converges or is released by the 120-frame cap.
+
+   drei's first-run guard can swallow the scroll event from the restore if it lands in the same frame as the resize-driven effect re-run. If you see the value sit at the old offset until the cap and then jump, make `onFocusChange` defer the `scrollTop` write with `requestAnimationFrame(() => { el.scrollTop = … })` and re-run.
+4. **Missed-blur guard.** Focus again and type an invalid address `abc`, then submit: the input is disabled while busy. After submitting, `document.activeElement` is outside the panel and the freeze is not left held: scrolling with the keyboard arrows moves `__progress()`.
+5. **User scroll.** Focus again, then dispatch a `wheel` event on the drei scroller (`el.dispatchEvent(new WheelEvent('wheel', { bubbles: true }))`). The input blurs, and `__progress()` follows the live scroll with no restore.
 
 Record the numbers.
 
@@ -1781,7 +1812,13 @@ Expected: PASS.
 
 With `pnpm dev` at 1440×900:
 - **p=1:** the device reads as lit, not flat. The tape and capacitor tops show soft highlights, and a soft halo sits behind the device.
-- **p=0.3:** a charge is still flying in from the right, and its shadow must be **behind that charge**, not mirrored to the left. If it's mirrored, change `SHADOW_ROTATION` to `[Math.PI, 0, 0]`, since both orientations project along +z (C15). Re-run the tests and re-check.
+- **p=0.3:** a charge is still flying in from the right, and its shadow must be **behind that charge**.
+
+The shadow camera and the plane are children of the same group, so mirroring is unlikely. The more likely failure is **no visible halo at all**, which means the plane's visible face points away from the camera. If there is no halo, or it's mirrored:
+- change `SHADOW_ROTATION` to `[Math.PI, 0, 0]` (both project along +z, C15);
+- re-run the tests and re-check.
+
+If neither orientation shows a halo, stop and report. Don't raise the opacity to compensate.
 
 If the device reads too dark or too washed out, adjust only the Lightformer and directional `intensity` values. Take before/after screenshots at p = 0.3 and 1.0.
 
@@ -2412,6 +2449,16 @@ Review every frame for:
 - sections 4 and 5 never overlapping;
 - the credits clear of the copy;
 - no horizontal scroll (`scrollWidth === innerWidth`).
+
+- [ ] **Step 2b: With reduced motion on, the email step is still reachable**
+
+With `prefers-reduced-motion: reduce` emulated, at 390×844 and at 1440×900:
+1. scroll the document to the end;
+2. click the LCD input and confirm it has focus (`document.activeElement.id === 'arm-email'`);
+3. type `abc` and press the ARM button;
+4. confirm the orange error text appears on the LCD.
+
+This proves the scrolling sections (and, on phones, their backdrops) don't cover the LCD or intercept the tap. If the click lands on a section instead, fix the stacking in Overlay: `pointer-events-none` on the backdrop pseudo is already required. Record the result for both sizes.
 
 - [ ] **Step 3: Contrast on the rendered page**
 
