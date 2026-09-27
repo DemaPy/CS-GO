@@ -1,5 +1,28 @@
 'use client'
 
+/*
+ * Adapted from @react-three/drei ContactShadows (https://github.com/pmndrs/drei),
+ * MIT License, Copyright (c) 2020 react-spring
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import {
@@ -140,12 +163,13 @@ export function WallContactShadows({
   const pass = useMemo(() => new WallShadowPass(resolution, scale), [resolution, scale])
   useEffect(() => () => pass.dispose(), [pass])
 
-  // drei resets its frame counter on every render; resetting it when `frames`
-  // changes is the part of that the caller relies on.
+  // drei resets its frame counter on every render. Resetting it when `frames`
+  // changes is the part of that the caller relies on; the rest of the deps make
+  // an idle rebuild (new targets, depth range or blur) repaint once.
   const count = useRef(0)
   useLayoutEffect(() => {
     count.current = 0
-  }, [frames])
+  }, [frames, pass, far, blur])
 
   useFrame(({ gl, scene }) => {
     const group = ref.current
