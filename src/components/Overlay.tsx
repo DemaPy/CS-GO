@@ -42,8 +42,15 @@ export function Overlay() {
                 // from 3rem above the label down to the bottom edge, with a
                 // hairline on top. `will-change-transform` makes this block a
                 // stacking context, so the -z-10 pseudo stays behind the
-                // text and in front of the canvas.
-                "before:pointer-events-none before:absolute before:-top-12 before:-left-6 before:-z-10 before:w-screen before:bottom-[calc(-1*(env(safe-area-inset-bottom)+5rem))] before:border-t before:border-rule before:bg-linear-to-t before:from-ground/92 before:via-ground/80 before:to-transparent before:content-[''] sm:before:-left-10 md:before:hidden"
+                // text and in front of the canvas. The fade band is a FIXED
+                // length (3rem == the -top-12 offset, i.e. exactly the gap
+                // above the label), not a percentage stop: a percentage scales
+                // with this block's own height, which differs per section, and
+                // left the label sitting in the ~36%-opaque part of the fade.
+                // A fixed 3rem band puts the transparent-to-opaque transition
+                // entirely in the space ABOVE the label, so the label, heading
+                // and body always sit on a >=95%-opaque --ground card.
+                "before:pointer-events-none before:absolute before:-top-12 before:-left-6 before:-z-10 before:w-screen before:bottom-[calc(-1*(env(safe-area-inset-bottom)+5rem))] before:border-t before:border-rule before:bg-linear-to-b before:from-transparent before:to-ground/95 before:to-[3rem] before:content-[''] sm:before:-left-10 md:before:hidden"
               } ${
                 // Desktop-only backdrop for section 5: at full push the camera
                 // fills the frame with device texture right behind this block
