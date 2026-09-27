@@ -127,7 +127,7 @@ export function DisplayPanel({
       setError(
         checkoutConfigured
           ? 'checkout did not open — try again'
-          : 'address saved — checkout opens once billing is live',
+          : "you're on the list — confirm in your inbox",
       )
       return
     }

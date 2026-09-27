@@ -29,7 +29,7 @@ export function Overlay() {
               // Desktop: centred beside the device; section 5 sits above the
               // panel because at full push the panel fills the middle.
               'items-end pb-[calc(env(safe-area-inset-bottom)+5rem)] md:pb-0'
-            } ${isLast ? 'md:items-start md:pt-[7svh]' : 'md:items-center'}`}
+            } ${isLast ? 'md:items-start md:pt-0' : 'md:items-center'}`}
           >
             {/* Section 5's copy is pinned by Experience once the panel lights.
                 Without it, this block slides up through the lit panel across
@@ -60,14 +60,26 @@ export function Overlay() {
                 // override) sized with a negative inset so the text keeps its
                 // current position; `content-['']` is scoped to `md:` so
                 // phones never get this pseudo.
+                // The bottom side is flush (0, not -1.25rem) rather than
+                // matching the other three: the longer stage-5 body (C-copy)
+                // pushes this card's natural bottom close to the LCD shell,
+                // and a symmetric -inset-5 would eat the >=16px clearance the
+                // shell needs (Ruling 21). Top/left/right keep -1.25rem so the
+                // label and edges still read as a comfortable card.
                 isLast
-                  ? "md:after:pointer-events-none md:after:absolute md:after:-inset-5 md:after:-z-10 md:after:rounded-sm md:after:bg-ground/95 md:after:content-['']"
+                  ? "md:after:pointer-events-none md:after:absolute md:after:-top-5 md:after:-left-5 md:after:-right-5 md:after:bottom-0 md:after:-z-10 md:after:rounded-sm md:after:bg-ground/95 md:after:content-['']"
                   : ''
               }`}
             >
               {/* The mono label is visual; screen readers get the eyebrow
                   ("Stage one"), which reads better than "zero one slash". */}
-              <p className="mb-5 flex items-center gap-3 font-mono text-xs uppercase tracking-[0.08em] text-muted">
+              <p
+                className={`mb-5 flex items-center gap-3 font-mono text-xs uppercase tracking-[0.08em] text-muted ${
+                  // Stage 5 only: tighter rhythm below the label claws back a
+                  // few px toward the shell clearance (Ruling 21).
+                  isLast ? 'md:mb-0' : ''
+                }`}
+              >
                 <span aria-hidden="true" className="inline-block h-px w-6 bg-signal" />
                 <span aria-hidden="true">
                   <span className="text-signal-ink">{label.count}</span> · {label.name}
@@ -84,7 +96,11 @@ export function Overlay() {
 
               {/* Every section, including 5: without its body the visitor is
                   never told what the input on the display is for (A9). */}
-              <p className="mt-5 text-[17px] leading-[1.55] text-muted md:text-lg">
+              <p
+                className={`mt-5 text-[17px] leading-[1.55] text-muted md:text-lg ${
+                  isLast ? 'md:mt-0 md:leading-[1.2]' : ''
+                }`}
+              >
                 {section.body}
               </p>
             </div>

@@ -1,7 +1,4 @@
-// TODO(copy): replace once product name and price are confirmed. Every string
-// below is the placeholder copy from plan Step 2.2, used verbatim because the
-// product questions went unanswered at execution time. Deliberately does not
-// name a product — nothing here should read as final.
+// copy approved 2026-09-27; only the product name is still TODO(copy).
 
 export type SectionId = 'casing' | 'charges' | 'harness' | 'panel' | 'arm'
 
@@ -19,36 +16,36 @@ export const SECTIONS: Section[] = [
     id: 'casing',
     range: [0.0, 0.2],
     eyebrow: 'Stage one',
-    heading: 'Nothing here is armed yet',
-    body: 'A shell, machined and empty. Scroll to build it.',
+    heading: 'An alarm clock that looks like a bomb',
+    body: 'A desk prop with a real alarm inside. Scroll to build it.',
   },
   {
     id: 'charges',
     range: [0.2, 0.4],
     eyebrow: 'Stage two',
-    heading: 'Four charges, seated',
-    body: 'Each block locks to a face. The weight is real now.',
+    heading: 'Three blocks. Zero explosives.',
+    body: "Inert, weighted, made to look the part. It's a clock; the blocks are just for drama.",
   },
   {
     id: 'harness',
     range: [0.4, 0.6],
     eyebrow: 'Stage three',
-    heading: 'Wired through',
-    body: 'One harness, one path, no redundancy.',
+    heading: 'Every wire goes somewhere',
+    body: "Cut the right one and the alarm snoozes. Cut the wrong one and it doesn't.",
   },
   {
     id: 'panel',
     range: [0.6, 0.8],
     eyebrow: 'Stage four',
-    heading: 'The panel goes in',
-    body: 'Dark until it has power. It has no reason to trust you yet.',
+    heading: "Set it like you're planting it",
+    body: 'Punch your wake-up time into the keypad. The display counts down to it all night.',
   },
   {
     id: 'arm',
     range: [0.8, 1.0],
     eyebrow: 'Stage five',
-    heading: 'Arm it',
-    body: 'Type the address that receives the key.',
+    heading: 'Defuse your morning',
+    body: 'Enter the code to stop it, before the timer does. Type your email on the display to join the waitlist.',
   },
 ]
 

@@ -58,8 +58,8 @@ const PARTS: PartSpec[] = [
     start: { pos: [0, -420, -B.z * 0.9], rot: [0, 0, 0.5] },
   },
 
-  // Four charges, 2x2 on the casing face. Each flies in from its own corner so
-  // they read as four separate objects rather than one block splitting.
+  // The charge blocks, 2x2 on the casing face. Each flies in from its own
+  // corner so they read as separate objects rather than one block splitting.
   ...([
     [-1, 1],
     [1, 1],

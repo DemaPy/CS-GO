@@ -60,7 +60,7 @@ export function ConfirmAddressEmail({
       <Head />
       {/* The inbox preview line — worth writing, since clients show it next to
           the subject and otherwise leak the first body words. */}
-      <Preview>One click arms your subscription. Nothing else.</Preview>
+      <Preview>One click confirms your spot on the waitlist.</Preview>
       <Body
         style={{
           margin: 0,
@@ -161,8 +161,9 @@ export function ConfirmAddressEmail({
                 color: COLORS.muted,
               }}
             >
-              Confirm this address and you will get build notes and updates.
-              That is the whole list. No digests, no partners.
+              Confirm this address to hold your place on the waitlist.
+              You&apos;ll hear when it ships: build notes and launch news
+              only.
             </Text>
 
             {/* A styled <a>, not <Button>: Outlook ignores padding on anchors,
@@ -186,7 +187,7 @@ export function ConfirmAddressEmail({
                   borderRadius: '6px',
                 }}
               >
-                Arm subscription
+                Confirm my spot
               </Link>
             </Section>
 

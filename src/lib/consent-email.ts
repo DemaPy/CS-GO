@@ -23,7 +23,7 @@ export async function renderConsentEmail(confirmUrl: string): Promise<{
 
   return {
     // No product name yet — TODO(copy) tracks that in src/content/sections.ts.
-    subject: 'Confirm your address',
+    subject: 'Confirm your spot on the waitlist',
     html,
     text,
   }

@@ -5,17 +5,22 @@ import { renderConsentEmail } from '@/lib/consent-email'
 const URL_ = 'https://example.test/api/confirm?t=abc.def'
 
 describe('confirmation email', () => {
+  let subject: string
   let html: string
   let text: string
 
   beforeAll(async () => {
-    ;({ html, text } = await renderConsentEmail(URL_))
+    ;({ subject, html, text } = await renderConsentEmail(URL_))
+  })
+
+  it('has the waitlist subject', () => {
+    expect(subject).toBe('Confirm your spot on the waitlist')
   })
 
   it('the button is signal-ink with white text', () => {
     const anchor = [...html.matchAll(/<a\b[^>]*>[\s\S]*?<\/a>/g)]
       .map((m) => m[0])
-      .find((a) => a.includes('Arm subscription'))
+      .find((a) => a.includes('Confirm my spot'))
     expect(anchor).toBeDefined()
     expect(anchor).toMatch(/background-color:\s*#C73E00/i)
     expect(anchor).toMatch(/[;"]\s*color:\s*#FFFFFF/i)

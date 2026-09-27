@@ -21,10 +21,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: metadataBaseFrom(process.env.CAPTURE_SITE_URL),
   // The template applies to child routes: /subscribed renders
-  // "Address confirmed · Five stages to armed" (C9). Formatting, not copy.
+  // "Address confirmed · Plant it. Defuse it. Wake up." (C9). Formatting, not copy.
   title: { default: SITE_TITLE, template: `%s · ${SITE_TITLE}` },
   description:
-    'A machined field device, assembled as you scroll. Five stages, then it is yours.',
+    'An alarm clock built like a bomb prop: countdown display, keypad code, defuse to snooze. Join the waitlist.',
 }
 
 // themeColor tints mobile browser chrome and in-app toolbars to the page

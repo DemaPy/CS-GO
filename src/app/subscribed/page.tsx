@@ -12,7 +12,7 @@ const COPY: Record<State, { eyebrow: string; heading: string; body: string }> = 
   confirmed: {
     eyebrow: 'Confirmed',
     heading: 'You are on the list',
-    body: 'Build notes and updates only. Every message has an unsubscribe link.',
+    body: "We'll email you when it ships. Build notes and launch news only; every message has an unsubscribe link.",
   },
   expired: {
     eyebrow: 'Link expired',
