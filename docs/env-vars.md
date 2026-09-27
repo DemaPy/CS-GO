@@ -19,6 +19,12 @@ NEXT_PUBLIC_PADDLE_PRICE_ID=
 CAPTURE_RESEND_API_KEY=
 CAPTURE_RESEND_AUDIENCE_ID=
 
+# ─── Site URL ─────────────────────────────────────────────────────────────────
+# Public origin of the site, e.g. https://example.com. Used for the confirm link
+# in the email AND as metadataBase for link-preview image URLs. Leave unset on
+# Vercel to fall back to the production URL; must be absolute http(s) if set.
+CAPTURE_SITE_URL=
+
 # ─── The device: real 3D model, or procedural placeholder ────────────────────
 # The one switch. Unset means on in development, off in production.
 # Set false/0/off to render the placeholder boxes instead.

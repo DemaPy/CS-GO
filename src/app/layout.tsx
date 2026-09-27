@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
+import { SITE_TITLE } from '@/content/site'
+import { metadataBaseFrom } from '@/lib/site-url'
 import './globals.css'
 
 // Geist for everything, Geist Mono for the stage label and credits. Normal
@@ -17,8 +19,10 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  // TODO(copy): replace once product name and price are confirmed.
-  title: 'Five stages to armed',
+  metadataBase: metadataBaseFrom(process.env.CAPTURE_SITE_URL),
+  // The template applies to child routes: /subscribed renders
+  // "Address confirmed · Five stages to armed" (C9). Formatting, not copy.
+  title: { default: SITE_TITLE, template: `%s · ${SITE_TITLE}` },
   description:
     'A machined field device, assembled as you scroll. Five stages, then it is yours.',
 }
