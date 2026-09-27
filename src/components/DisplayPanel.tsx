@@ -212,7 +212,10 @@ export function DisplayPanel({
               // Says what happens when used, and keeps the same word as the
               // section heading. Also the mobile tap target — Enter works, but
               // not every keyboard shows a submit key.
-              className="readout shrink-0 rounded-[3px] border border-[#4ee27b]/45 px-[9px] py-[3px] text-[10px] disabled:opacity-40"
+              className="readout relative shrink-0 rounded-[3px] border border-[#4ee27b]/45 px-[9px] py-[3px] text-[10px] disabled:opacity-40 before:absolute before:left-1/2 before:top-1/2 before:h-[42px] before:w-[max(100%,42px)] before:-translate-x-1/2 before:-translate-y-1/2 before:content-['']"
+              // The visible button stays small; the ::before is a centred
+              // 42 CSS px hit box, which is >= 44 screen px at full push on
+              // any phone >= 360 wide (Html scale 14.6/40 x projection).
             >
               {busy ? 'wait' : 'arm'}
             </button>
