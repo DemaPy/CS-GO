@@ -28,6 +28,7 @@ import {
   type CameraPose,
   type Viewport,
 } from '@/three/framing'
+import { StudioLighting } from '@/three/StudioLighting'
 
 /**
  * Scroll range over which section four's copy fades out.
@@ -314,6 +315,7 @@ function DeviceScene({
 
   return (
     <>
+      <StudioLighting progress={progressRef} />
       <primitive object={rig.root} />
       {/* Portalled into displayAnchor so the readout rides the panel without
           reparenting the anchor out of the rig — mounting it as a <primitive>
@@ -322,20 +324,6 @@ function DeviceScene({
         <DisplayPanel progress={progressRef} occludeAgainst={panelRef} onFocusChange={onFocusChange} />,
         rig.displayAnchor,
       )}
-    </>
-  )
-}
-
-function Lighting() {
-  return (
-    <>
-      {/* Key light high and camera-right, a dim brass bounce opposite it. The
-          olive body only separates from the olive-black ground if the key is
-          strong enough — at low intensity the whole device reads as one dark
-          mass, which is what the first pass looked like. */}
-      <ambientLight intensity={0.7} color="#cfd3c0" />
-      <directionalLight position={[0.5, 0.6, 0.7]} intensity={3.4} />
-      <directionalLight position={[-0.6, -0.2, 0.35]} intensity={0.9} color="#8a6e3b" />
     </>
   )
 }
@@ -395,7 +383,6 @@ export function Experience() {
             dpr={desktop ? [1, 2] : [1, 1.75]}
           >
             <Suspense fallback={null}>
-              <Lighting />
               <Device desktop={desktop} scrub={false} />
             </Suspense>
           </Canvas>
@@ -419,7 +406,6 @@ export function Experience() {
       >
         <Suspense fallback={null}>
           <ScrollControls pages={SECTIONS.length} damping={0.25}>
-            <Lighting />
             <Device desktop={desktop} scrub />
             <Scroll html>
               <Overlay />
