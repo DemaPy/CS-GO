@@ -86,13 +86,6 @@ body {
   color: var(--signal);
 }
 
-/* Mobile: dim the device, never the copy. Scoped to the canvas element
-   because drei's `<Scroll html>` overlay shares the Canvas container div —
-   dimming the container fades the headline too. */
-.dim-device canvas {
-  opacity: 0.35;
-}
-
 /* Step 8.2: focus must be unmistakable against the dark panel. Applied
    globally so no interactive element can quietly lose its ring. */
 :focus-visible {

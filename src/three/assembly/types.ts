@@ -48,9 +48,10 @@ export interface AssemblyRig {
  * At 1000x the camera sits ~107 units back, so the CSS margin is ~107px and
  * magnification drops to ~17x, which is an ordinary, stable projection.
  *
- * Everything in world space scales together — see `BASE_POS`, `PANEL_WIDTH`,
- * the camera's near/far, both rigs' scatter offsets, and the `scale` on
- * `<Html>`. Ratios are unchanged, so the framing maths is untouched.
+ * Everything in world space scales together — see `BASE_DISTANCE`,
+ * `PANEL_WIDTH` (both in `@/three/framing`), the camera's near/far, both
+ * rigs' scatter offsets, and the `scale` on `<Html>`. Ratios are unchanged,
+ * so the framing maths is untouched.
  *
  * The aspect ratio is a framing approximation, not a real-world measurement —
  * it matches neither an M112 charge nor obviously a satchel. Only the
