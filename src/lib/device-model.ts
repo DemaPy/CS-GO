@@ -3,20 +3,18 @@
  * placeholder rig?
  *
  * This replaces the hardcoded `USE_DEV_MODEL` constant that used to live in
- * `Experience`. Same switch, same job — moved into the environment, because
- * which model is on screen is a deployment fact rather than a source-code one.
- * The local dev asset and the handcrafted production asset are different files
- * on different machines, and `/public/models/` is gitignored, so the answer
- * cannot be committed.
+ * `Experience`. It stays an env var so a deployment can still fall back to the
+ * placeholder, or point at a different model, without a code change.
  */
 
 /**
  * The device model, and the default when nothing overrides it.
  *
- * `/public/models/` is gitignored, so this file exists on the machines that
- * built it and nowhere else — a fresh clone gets a 404 here, which
- * `DeviceModelBoundary` turns into the placeholder plus a console line rather
- * than a blank page.
+ * Committed: `.gitignore` excludes `/public/models/*` except this one file, so
+ * it ships with every deploy. The rejected `dev-device.glb` stays ignored and
+ * can never reach a build. A missing or broken file is still demoted by
+ * `DeviceModelBoundary` to the placeholder plus a console line, not a blank
+ * page.
  *
  * Built from the CC-BY "C4 bomb | CS2" download by a Blender pass that groups
  * 430 loose parts into the five `SectionId` sets, pivots each at its own
@@ -41,18 +39,15 @@ function isOff(value: string): boolean {
 const flag = (rawSwitch ?? '').trim().toLowerCase()
 
 /**
- * Unset means: on in development, off in production.
+ * Unset means on, in development and production alike.
  *
- * Both halves are deliberate. On in development so `next dev` shows the real
- * device with no setup — the two rigs are close enough in silhouette that
- * "which one am I looking at" is a real question, and the answer should not
- * depend on remembering to write a line in `.env.local`. Off in production so
- * the un-vetted dev asset cannot reach a deploy by default; shipping a real
- * model there is an explicit act, which is what the old
- * `USE_DEV_MODEL = false` was protecting.
+ * Production used to default to the placeholder, because the only model to
+ * hand was the un-vetted dev asset. The default model is now the licensed,
+ * committed `c4-device.glb`, credited in `src/content/credits.ts`, so the page
+ * ships the real device by default. Set the switch to false/0/off/no to force
+ * the placeholder.
  */
-const useModel =
-  flag === '' ? process.env.NODE_ENV !== 'production' : !isOff(flag)
+const useModel = flag === '' ? true : !isOff(flag)
 
 /**
  * The model to load, or `null` to use the placeholder rig.

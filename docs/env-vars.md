@@ -26,11 +26,11 @@ CAPTURE_RESEND_AUDIENCE_ID=
 CAPTURE_SITE_URL=
 
 # ─── The device: real 3D model, or procedural placeholder ────────────────────
-# The one switch. Unset means on in development, off in production.
+# The one switch. Unset means on, in development and production.
 # Set false/0/off to render the placeholder boxes instead.
 NEXT_PUBLIC_USE_DEV_MODEL=
 # Optional. Which model to load when the switch is on; defaults to
-# /models/dev-device.glb. Set this to the handcrafted production model.
+# /models/c4-device.glb (the licensed, committed model).
 NEXT_PUBLIC_DEVICE_MODEL_URL=
 ```
 
@@ -89,30 +89,24 @@ available. Real price IDs need one of those fixed.
 
 `src/lib/device-model.ts` is the only place these are read, and `Experience` is
 the only thing that reads *it*. The switch used to be a hardcoded
-`USE_DEV_MODEL` constant in `Experience`; it is an env var now because which
-model is on screen is a deployment fact, not a source-code one — the local dev
-asset and the handcrafted production asset are different files on different
-machines, and `/public/models/` is gitignored, so the answer cannot be
-committed.
+`USE_DEV_MODEL` constant in `Experience`; it stays an env var so a deployment
+can fall back to the placeholder, or load a different model, without a code
+change.
 
 | `NEXT_PUBLIC_USE_DEV_MODEL` | `NEXT_PUBLIC_DEVICE_MODEL_URL` | Result |
 |---|---|---|
-| unset, `next dev` | unset | `/models/dev-device.glb` |
-| unset, `next build` | unset | placeholder rig |
+| unset | unset | `/models/c4-device.glb` |
 | `false` / `0` / `off` / `no` | anything | placeholder rig |
-| `true` / `1` / `on` | unset | `/models/dev-device.glb` |
-| `true` / `1` / `on` | `/models/device.glb` | `/models/device.glb` |
+| `true` / `1` / `on` | unset | `/models/c4-device.glb` |
+| `true` / `1` / `on` or unset | `/models/device.glb` | `/models/device.glb` |
 
-**Unset means on in development, off in production**, and both halves are
-deliberate. On in development so `next dev` shows the real device with no
-setup — the two rigs are close enough in silhouette that "which one am I
-looking at" is a real question, and the answer should not depend on remembering
-to write a line in `.env.local`. Off in production because `dev-device.glb`
+**Unset means on, in development and production.** Production used to default
+to the placeholder because the only model to hand was `dev-device.glb`, which
 derives from the asset rejected at the Step 0 provenance gate
-(`docs/asset-provenance.md`) and must never be deployed; shipping a model there
-is an explicit act, which is exactly what the old `USE_DEV_MODEL = false` was
-protecting. To ship the handcrafted model, set both vars in the production
-environment.
+(`docs/asset-provenance.md`). The default is now the licensed `c4-device.glb`
+(CC BY, credited on the page), the one file in `/public/models/` that
+`.gitignore` lets into the repo. `dev-device.glb` stays ignored, so it cannot
+reach a deploy.
 
 `NEXT_PUBLIC_*` values are inlined into the client bundle at build time, so a
 changed value needs a fresh build — in dev, a page reload once the server has
@@ -121,7 +115,7 @@ restarted itself.
 **Every load says which rig is on screen**, in dev only:
 
 ```
-[device-model] loading /models/dev-device.glb
+[device-model] loading /models/c4-device.glb
 [device-model] placeholder — NEXT_PUBLIC_USE_DEV_MODEL is off
 ```
 
