@@ -48,3 +48,32 @@ describe('confirmation email', () => {
     expect(text).toContain(URL_)
   })
 })
+
+describe('confirmation email in Russian', () => {
+  let subject: string
+  let html: string
+  let text: string
+
+  beforeAll(async () => {
+    ;({ subject, html, text } = await renderConsentEmail(URL_, 'ru'))
+  })
+
+  it('uses the Russian subject, lang and button', () => {
+    expect(subject).toBe('Подтверди своё место в листе ожидания')
+    expect(html).toMatch(/<html[^>]*lang="ru"/)
+    const anchor = [...html.matchAll(/<a\b[^>]*>[\s\S]*?<\/a>/g)]
+      .map((m) => m[0])
+      .find((a) => a.includes('Подтвердить место'))
+    expect(anchor).toMatch(/background-color:\s*#C73E00/i)
+  })
+
+  it('pluralises the expiry and keeps the link in the text part', () => {
+    expect(html).toContain('Ссылка действует 7 дней')
+    expect(text).toContain(URL_)
+  })
+
+  it('carries no English body copy', () => {
+    expect(html).not.toContain('Confirm my spot')
+    expect(html).not.toContain('One click and you are on the list')
+  })
+})

@@ -86,6 +86,15 @@ body {
   color: var(--signal);
 }
 
+/* LCD messages in a script DSEG14 cannot draw (it has Latin glyphs only), e.g.
+   Russian. Unlayered and after .readout for the same reason as .readout-alert:
+   a font utility would lose to .readout's font-family. The colour still comes
+   from .readout / .readout-alert. */
+.readout-mono {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  letter-spacing: 0;
+}
+
 /* Step 8.2: focus must be unmistakable against the dark panel. Applied
    globally so no interactive element can quietly lose its ring. */
 :focus-visible {

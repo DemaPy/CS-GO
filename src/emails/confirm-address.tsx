@@ -11,7 +11,9 @@ import {
   Text,
 } from '@react-email/components'
 
+import type { SiteCopy } from '@/content/copy'
 import { PALETTE } from '@/content/palette'
+import type { Locale } from '@/i18n/locales'
 
 /**
  * Light studio, matching the landing page: an off-white ground, a white card,
@@ -47,20 +49,25 @@ const SANS =
 
 export interface ConfirmAddressEmailProps {
   confirmUrl: string
+  /** The signup language's email strings. */
+  copy: SiteCopy['email']
+  locale: Locale
   /** Matches the token TTL in lib/consent-token.ts. */
   expiresInDays?: number
 }
 
 export function ConfirmAddressEmail({
   confirmUrl,
+  copy,
+  locale,
   expiresInDays = 7,
 }: ConfirmAddressEmailProps) {
   return (
-    <Html lang="en">
+    <Html lang={locale}>
       <Head />
       {/* The inbox preview line — worth writing, since clients show it next to
           the subject and otherwise leak the first body words. */}
-      <Preview>One click confirms your spot on the waitlist.</Preview>
+      <Preview>{copy.preview}</Preview>
       <Body
         style={{
           margin: 0,
@@ -95,7 +102,7 @@ export function ConfirmAddressEmail({
                 color: COLORS.signalInk,
               }}
             >
-              Stage five &middot; awaiting confirmation
+              {copy.eyebrow}
             </Text>
 
             {/* The LED panel */}
@@ -121,7 +128,7 @@ export function ConfirmAddressEmail({
                   color: '#3AA35C',
                 }}
               >
-                status
+                {copy.lcdLabel}
               </Text>
               <Text
                 style={{
@@ -133,7 +140,7 @@ export function ConfirmAddressEmail({
                   color: COLORS.armed,
                 }}
               >
-                NOT ARMED
+                {copy.lcdValue}
               </Text>
             </Section>
 
@@ -149,7 +156,7 @@ export function ConfirmAddressEmail({
                 color: COLORS.ink,
               }}
             >
-              One click and you are on the list
+              {copy.heading}
             </Heading>
 
             <Text
@@ -161,9 +168,7 @@ export function ConfirmAddressEmail({
                 color: COLORS.muted,
               }}
             >
-              Confirm this address to hold your place on the waitlist.
-              You&apos;ll hear when it ships: build notes and launch news
-              only.
+              {copy.body}
             </Text>
 
             {/* A styled <a>, not <Button>: Outlook ignores padding on anchors,
@@ -187,7 +192,7 @@ export function ConfirmAddressEmail({
                   borderRadius: '6px',
                 }}
               >
-                Confirm my spot
+                {copy.button}
               </Link>
             </Section>
 
@@ -200,7 +205,7 @@ export function ConfirmAddressEmail({
                 color: COLORS.muted,
               }}
             >
-              Button not working? Paste this into your browser:
+              {copy.fallbackHint}
             </Text>
             <Text
               style={{
@@ -234,7 +239,7 @@ export function ConfirmAddressEmail({
               color: COLORS.signalInk,
             }}
           >
-            This link expires in {expiresInDays} days
+            {copy.expiry(expiresInDays)}
           </Text>
 
           <Text
@@ -246,8 +251,7 @@ export function ConfirmAddressEmail({
               color: COLORS.muted,
             }}
           >
-            Did not ask for this? Ignore it. Your address has not been added to
-            anything, and the link stops working on its own.
+            {copy.footer}
           </Text>
         </Container>
       </Body>

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+import { DEFAULT_LOCALE, localizedPath, type Locale } from '@/i18n/locales'
 import { readConsentToken } from '@/lib/consent-token'
 
 const API_KEY = process.env.CAPTURE_RESEND_API_KEY
@@ -21,8 +22,13 @@ export async function GET(request: Request) {
   const token = url.searchParams.get('t') ?? ''
   const result = readConsentToken(token)
 
-  const done = (state: string) =>
-    NextResponse.redirect(new URL(`/subscribed?state=${state}`, url.origin), 303)
+  // Lands on /subscribed in the language the visitor signed up in. A link that
+  // fails to verify has no trustworthy locale, so it lands in English.
+  const done = (state: string, locale: Locale = DEFAULT_LOCALE) =>
+    NextResponse.redirect(
+      new URL(`${localizedPath(locale, '/subscribed')}?state=${state}`, url.origin),
+      303,
+    )
 
   if (!result.ok) {
     // 'expired' earns a distinct message because it is the one failure a
@@ -31,7 +37,7 @@ export async function GET(request: Request) {
     return done(result.reason === 'expired' ? 'expired' : 'invalid')
   }
 
-  const { email } = result
+  const { email, locale } = result
 
   if (!API_KEY || !AUDIENCE_ID) {
     // The consent itself is valid and verified; only the storage is missing.
@@ -40,7 +46,7 @@ export async function GET(request: Request) {
       email,
       '- no audience configured, nothing stored',
     )
-    return done('confirmed')
+    return done('confirmed', locale)
   }
 
   try {
@@ -57,12 +63,12 @@ export async function GET(request: Request) {
       console.error('[confirm] resend rejected the contact:', error)
       // Still a success from the visitor's side — they did their part, and
       // telling them otherwise invites a pointless second click.
-      return done('confirmed')
+      return done('confirmed', locale)
     }
 
-    return done('confirmed')
+    return done('confirmed', locale)
   } catch (error) {
     console.error('[confirm] resend threw:', error)
-    return done('confirmed')
+    return done('confirmed', locale)
   }
 }

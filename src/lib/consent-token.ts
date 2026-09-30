@@ -1,10 +1,13 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
+import { DEFAULT_LOCALE, isLocale, type Locale } from '@/i18n/locales'
+
 /**
  * Stateless signed tokens for newsletter confirmation links.
  *
- * No database: the token carries the address and an expiry, and the HMAC makes
- * it unforgeable. That means a confirmation link cannot be guessed, cannot be
+ * No database: the token carries the address, an expiry and the signup
+ * language, and the HMAC makes it unforgeable (the language included, so the
+ * redirect after confirming cannot be steered either). That means a confirmation link cannot be guessed, cannot be
  * edited to confirm somebody else's address, and stops working on its own.
  */
 
@@ -32,16 +35,20 @@ function sign(payload: string): string {
 }
 
 /** `<base64url payload>.<base64url hmac>`, safe to put in a URL. */
-export function mintConsentToken(email: string, now = Date.now()): string {
+export function mintConsentToken(
+  email: string,
+  locale: Locale = DEFAULT_LOCALE,
+  now = Date.now(),
+): string {
   if (!consentSigningAvailable) {
     throw new Error('CAPTURE_LINK_SECRET is missing or shorter than 32 chars')
   }
-  const payload = b64url(JSON.stringify({ e: email, x: now + TTL_MS }))
+  const payload = b64url(JSON.stringify({ e: email, x: now + TTL_MS, l: locale }))
   return `${payload}.${sign(payload)}`
 }
 
 export type ConsentResult =
-  | { ok: true; email: string }
+  | { ok: true; email: string; locale: Locale }
   | { ok: false; reason: 'malformed' | 'bad-signature' | 'expired' | 'unavailable' }
 
 export function readConsentToken(
@@ -83,8 +90,10 @@ export function readConsentToken(
     return { ok: false, reason: 'malformed' }
   }
 
-  const { e: email, x: expires } = parsed as { e: string; x: number }
+  const { e: email, x: expires, l } = parsed as { e: string; x: number; l?: unknown }
   if (now > expires) return { ok: false, reason: 'expired' }
 
-  return { ok: true, email }
+  // Links minted before the locale existed carry no `l`: they were English.
+  const locale = typeof l === 'string' && isLocale(l) ? l : DEFAULT_LOCALE
+  return { ok: true, email, locale }
 }

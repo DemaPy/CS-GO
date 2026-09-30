@@ -1,3 +1,4 @@
+import type { PageCopy } from '@/content/copy'
 import { SECTIONS } from '@/content/sections'
 import { stageLabel } from '@/content/stage-label'
 
@@ -8,8 +9,11 @@ import { stageLabel } from '@/content/stage-label'
  * right two-thirds on desktop.
  *
  * No entrance animation. The scroll scrub is the page's entire motion budget.
+ *
+ * Strings come in as `copy`, the active language's dictionary; the section
+ * list itself (ids, order) comes from `SECTIONS`.
  */
-export function Overlay() {
+export function Overlay({ copy }: { copy: PageCopy }) {
   return (
     <div className="w-screen">
       {SECTIONS.map((section, i) => {
@@ -18,7 +22,8 @@ export function Overlay() {
         // it is still on screen when section 5's copy pins to the top. See
         // the fade in Experience for why that needs a handle.
         const isPenultimate = i === SECTIONS.length - 2
-        const label = stageLabel(i, SECTIONS.length, section.id)
+        const text = copy.sections[section.id]
+        const label = stageLabel(i, SECTIONS.length, text.stage)
         return (
           <section
             key={section.id}
@@ -28,7 +33,7 @@ export function Overlay() {
               // home indicator; the device owns the top ~58% (framing.ts).
               // Desktop: centred beside the device; section 5 sits above the
               // panel because at full push the panel fills the middle.
-              'items-end pb-[calc(env(safe-area-inset-bottom)+5rem)] md:pb-0'
+              'items-end pb-[calc(env(safe-area-inset-bottom)+6rem)] md:pb-0'
             } ${isLast ? 'md:items-start md:pt-5' : 'md:items-center'}`}
           >
             {/* Section 5's copy is pinned by Experience once the panel lights.
@@ -50,7 +55,7 @@ export function Overlay() {
                 // A fixed 3rem band puts the transparent-to-opaque transition
                 // entirely in the space ABOVE the label, so the label, heading
                 // and body always sit on a >=95%-opaque --ground card.
-                "before:pointer-events-none before:absolute before:-top-12 before:-left-6 before:-z-10 before:w-screen before:bottom-[calc(-1*(env(safe-area-inset-bottom)+5rem))] before:border-t before:border-rule before:bg-linear-to-b before:from-transparent before:to-ground/95 before:to-[3rem] before:content-[''] sm:before:-left-10 md:before:hidden"
+                "before:pointer-events-none before:absolute before:-top-12 before:-left-6 before:-z-10 before:w-screen before:bottom-[calc(-1*(env(safe-area-inset-bottom)+6rem))] before:border-t before:border-rule before:bg-linear-to-b before:from-transparent before:to-ground/95 before:to-[3rem] before:content-[''] sm:before:-left-10 md:before:hidden"
               } ${
                 // Desktop-only backdrop for section 5: at full push the camera
                 // fills the frame with device texture right behind this block
@@ -88,14 +93,14 @@ export function Overlay() {
                 <span aria-hidden="true">
                   <span className="text-signal-ink">{label.count}</span> · {label.name}
                 </span>
-                <span className="sr-only">{section.eyebrow}</span>
+                <span className="sr-only">{text.eyebrow}</span>
               </p>
 
               <h2
                 id={`heading-${section.id}`}
                 className="h-display text-[clamp(2.25rem,8vw,4rem)] text-ink"
               >
-                {section.heading}
+                {text.heading}
               </h2>
 
               {/* Every section, including 5: without its body the visitor is
@@ -105,7 +110,7 @@ export function Overlay() {
                   isLast ? 'md:mt-2' : ''
                 }`}
               >
-                {section.body}
+                {text.body}
               </p>
             </div>
           </section>

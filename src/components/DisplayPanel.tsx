@@ -5,7 +5,9 @@ import { useFrame } from '@react-three/fiber'
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import type { Object3D } from 'three'
 
+import type { SiteCopy } from '@/content/copy'
 import { DISPLAY_LIVE_AT } from '@/content/sections'
+import type { Locale } from '@/i18n/locales'
 import { checkoutConfigured, loadPaddle, openCheckout } from '@/lib/paddle'
 import { CaptureInput, firstEmailError } from '@/lib/schema'
 
@@ -33,6 +35,8 @@ export function DisplayPanel({
   progress,
   occludeAgainst,
   onFocusChange,
+  lcd,
+  locale,
 }: {
   /** Live scroll progress. A ref, not a prop value — this updates every frame
    *  and re-rendering React at 60fps to move an opacity would be absurd. */
@@ -42,6 +46,10 @@ export function DisplayPanel({
   /** Focus on the address input, so the scene can hold scroll progress
    *  while a keyboard resizes the viewport. See lib/scroll-freeze. */
   onFocusChange?: (focused: boolean) => void
+  /** The active language's LCD strings. */
+  lcd: SiteCopy['lcd']
+  /** Sent with the address, so the confirmation email is in this language. */
+  locale: Locale
 }) {
   const shellRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -87,9 +95,9 @@ export function DisplayPanel({
 
     // Validate before any network call (Step 7.2). An invalid address shows an
     // inline message and does not navigate.
-    const message = firstEmailError(value)
-    if (message) {
-      setError(message)
+    const code = firstEmailError(value)
+    if (code) {
+      setError(lcd.errors[code])
       setStatus('error')
       inputRef.current?.focus()
       return
@@ -106,7 +114,7 @@ export function DisplayPanel({
       const response = await fetch('/api/capture', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, locale }),
       })
       if (!response.ok) {
         console.error('[capture] returned', response.status)
@@ -125,9 +133,7 @@ export function DisplayPanel({
       // True, and specific about whose problem it is.
       setStatus('captured')
       setError(
-        checkoutConfigured
-          ? 'checkout did not open — try again'
-          : "you're on the list — confirm in your inbox",
+        checkoutConfigured ? lcd.checkoutFailed : lcd.joined,
       )
       return
     }
@@ -172,7 +178,7 @@ export function DisplayPanel({
             htmlFor="arm-email"
             className="readout mb-[8px] block text-[10px] opacity-55"
           >
-            address
+            {lcd.label}
           </label>
 
           <div className="flex items-end gap-[10px]">
@@ -217,7 +223,7 @@ export function DisplayPanel({
               // 42 CSS px hit box, which is >= 44 screen px at full push on
               // any phone >= 360 wide (Html scale 14.6/40 x projection).
             >
-              {busy ? 'wait' : 'arm'}
+              {busy ? lcd.busy : lcd.button}
             </button>
           </div>
 
@@ -226,7 +232,11 @@ export function DisplayPanel({
               id="arm-email-message"
               // Signal orange, not red: the message is a correction, not an
               // alarm. `readout-alert`, not a utility class; see globals.css.
-              className="readout readout-alert mt-[9px] text-[9px] leading-[1.4]"
+              // DSEG14 draws Latin only: a language in another script shows
+              // its messages in Geist Mono, same colour (SiteCopy.lcd).
+              className={`readout readout-alert mt-[9px] leading-[1.4] ${
+                lcd.messageFont === 'mono' ? 'readout-mono text-[10px]' : 'text-[9px]'
+              }`}
               role="status"
             >
               {error}

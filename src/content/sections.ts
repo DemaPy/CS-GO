@@ -1,4 +1,4 @@
-// copy approved 2026-09-27; only the product name is still TODO(copy).
+// Structure only. Every visible string lives in src/content/copy/, per language.
 
 export type SectionId = 'casing' | 'charges' | 'harness' | 'panel' | 'arm'
 
@@ -6,46 +6,28 @@ export interface Section {
   id: SectionId
   /** inclusive start, exclusive end, of overall scroll progress 0..1 */
   range: [number, number]
-  eyebrow: string
-  heading: string
-  body: string
 }
 
 export const SECTIONS: Section[] = [
   {
     id: 'casing',
     range: [0.0, 0.2],
-    eyebrow: 'Stage one',
-    heading: 'An alarm clock that looks like a bomb',
-    body: 'A desk prop with a real alarm inside. Scroll to build it.',
   },
   {
     id: 'charges',
     range: [0.2, 0.4],
-    eyebrow: 'Stage two',
-    heading: 'Three blocks. Zero explosives.',
-    body: "Inert, weighted, made to look the part. It's a clock; the blocks are just for drama.",
   },
   {
     id: 'harness',
     range: [0.4, 0.6],
-    eyebrow: 'Stage three',
-    heading: 'Every wire goes somewhere',
-    body: "Cut the right one and the alarm snoozes. Cut the wrong one and it doesn't.",
   },
   {
     id: 'panel',
     range: [0.6, 0.8],
-    eyebrow: 'Stage four',
-    heading: "Set it like you're planting it",
-    body: 'Punch your wake-up time into the keypad. The display counts down to it all night.',
   },
   {
     id: 'arm',
     range: [0.8, 1.0],
-    eyebrow: 'Stage five',
-    heading: 'Defuse your morning',
-    body: 'Enter the code to stop it, before the timer does. Type your email on the display to join the waitlist.',
   },
 ]
 

@@ -1,6 +1,8 @@
 import { render } from '@react-email/render'
 
+import { getCopy } from '@/content/copy'
 import { ConfirmAddressEmail } from '@/emails/confirm-address'
+import { DEFAULT_LOCALE, type Locale } from '@/i18n/locales'
 
 /**
  * Renders the confirmation email to the two bodies Resend wants.
@@ -9,12 +11,16 @@ import { ConfirmAddressEmail } from '@/emails/confirm-address'
  * never drift from the HTML — which is exactly how text parts rot when they
  * are maintained by hand.
  */
-export async function renderConsentEmail(confirmUrl: string): Promise<{
+export async function renderConsentEmail(
+  confirmUrl: string,
+  locale: Locale = DEFAULT_LOCALE,
+): Promise<{
   subject: string
   html: string
   text: string
 }> {
-  const element = ConfirmAddressEmail({ confirmUrl })
+  const copy = getCopy(locale).email
+  const element = ConfirmAddressEmail({ confirmUrl, copy, locale })
 
   const [html, text] = await Promise.all([
     render(element),
@@ -22,8 +28,7 @@ export async function renderConsentEmail(confirmUrl: string): Promise<{
   ])
 
   return {
-    // No product name yet — TODO(copy) tracks that in src/content/sections.ts.
-    subject: 'Confirm your spot on the waitlist',
+    subject: copy.subject,
     html,
     text,
   }

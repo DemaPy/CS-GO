@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const { email } = parsed.data
+  const { email, locale } = parsed.data
 
   if (!consentSigningAvailable) {
     console.error(
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
   // Prefer an explicit site URL; fall back to the request's own origin so this
   // works in dev and on a preview deploy without another env var to forget.
   const origin = SITE_URL ?? new URL(request.url).origin
-  const confirmUrl = `${origin}/api/confirm?t=${encodeURIComponent(mintConsentToken(email))}`
+  const confirmUrl = `${origin}/api/confirm?t=${encodeURIComponent(mintConsentToken(email, locale))}`
 
   if (!API_KEY) {
     // Documented fallback: log the link so the whole flow stays testable
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
     const { Resend } = await import('resend')
     const resend = new Resend(API_KEY)
 
-    const { subject, html, text } = await renderConsentEmail(confirmUrl)
+    const { subject, html, text } = await renderConsentEmail(confirmUrl, locale)
 
     const { error } = await resend.emails.send({
       from: FROM,

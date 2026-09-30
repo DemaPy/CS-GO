@@ -9,7 +9,9 @@ import { Credits } from '@/components/Credits'
 import { DeviceModelBoundary } from '@/components/DeviceModelBoundary'
 import { DisplayPanel } from '@/components/DisplayPanel'
 import { Overlay } from '@/components/Overlay'
+import type { PageCopy } from '@/content/copy'
 import { SECTIONS, subProgress } from '@/content/sections'
+import type { Locale } from '@/i18n/locales'
 import {
   DEVICE_MODEL_REASON,
   DEVICE_MODEL_URL,
@@ -47,6 +49,10 @@ interface DeviceProps {
   desktop: boolean
   /** When false the rig mounts fully assembled and never scrubs (Step 8.1). */
   scrub: boolean
+  /** The active language's LCD strings, handed down to the display. Props,
+   *  not context: context crossing the R3F canvas boundary is implicit. */
+  lcd: PageCopy['lcd']
+  locale: Locale
 }
 
 /**
@@ -98,6 +104,8 @@ function GltfDevice({ url, ...props }: DeviceProps & { url: string }) {
 function DeviceScene({
   desktop,
   scrub,
+  lcd,
+  locale,
   rig,
 }: DeviceProps & { rig: AssemblyRig }) {
   useEffect(() => () => rig.dispose(), [rig])
@@ -321,7 +329,13 @@ function DeviceScene({
           reparenting the anchor out of the rig — mounting it as a <primitive>
           child would tear it off the panel it is measured against. */}
       {createPortal(
-        <DisplayPanel progress={progressRef} occludeAgainst={panelRef} onFocusChange={onFocusChange} />,
+        <DisplayPanel
+          progress={progressRef}
+          occludeAgainst={panelRef}
+          onFocusChange={onFocusChange}
+          lcd={lcd}
+          locale={locale}
+        />,
         rig.displayAnchor,
       )}
     </>
@@ -338,7 +352,7 @@ const CANVAS_PROPS = {
   },
 } as const
 
-export function Experience() {
+export function Experience({ copy, locale }: { copy: PageCopy; locale: Locale }) {
   const reduced = useReducedMotion()
   const desktop = useMediaQuery('(min-width: 768px)')
 
@@ -359,8 +373,8 @@ export function Experience() {
   if (reduced === null || desktop === null) {
     return (
       <main className="relative">
-        <Overlay />
-        <Credits />
+        <Overlay copy={copy} />
+        <Credits copy={copy} locale={locale} />
       </main>
     )
   }
@@ -383,7 +397,7 @@ export function Experience() {
             dpr={desktop ? [1, 2] : [1, 1.75]}
           >
             <Suspense fallback={null}>
-              <Device desktop={desktop} scrub={false} />
+              <Device desktop={desktop} scrub={false} lcd={copy.lcd} locale={locale} />
             </Suspense>
           </Canvas>
         </div>
@@ -393,9 +407,9 @@ export function Experience() {
             order on top of the canvas wrapper, would otherwise swallow every
             click meant for the canvas's `Html`-portalled LCD input/button. */}
         <div className="relative pointer-events-none">
-          <Overlay />
+          <Overlay copy={copy} />
         </div>
-        <Credits />
+        <Credits copy={copy} locale={locale} />
       </main>
     )
   }
@@ -411,9 +425,9 @@ export function Experience() {
       >
         <Suspense fallback={null}>
           <ScrollControls pages={SECTIONS.length} damping={0.25}>
-            <Device desktop={desktop} scrub />
+            <Device desktop={desktop} scrub lcd={copy.lcd} locale={locale} />
             <Scroll html>
-              <Overlay />
+              <Overlay copy={copy} />
             </Scroll>
           </ScrollControls>
         </Suspense>
@@ -421,7 +435,7 @@ export function Experience() {
       {/* Outside the <Canvas> deliberately: inside `<Scroll html>` it would
           ride the scroll and only be on screen for part of the page, which is
           the one thing a required credit may not do. */}
-      <Credits />
+      <Credits copy={copy} locale={locale} />
     </main>
   )
 }
